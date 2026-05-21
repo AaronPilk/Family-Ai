@@ -61,7 +61,28 @@ export default function TimelineScreen() {
           gap: 10,
         }}
       >
-        <BranchSwitcher />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: tokens.color.bgPrimary,
+              borderWidth: 1,
+              borderColor: tokens.color.borderSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ fontSize: 22, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <BranchSwitcher />
+          </View>
+        </View>
         <Text
           style={{
             fontSize: 12,

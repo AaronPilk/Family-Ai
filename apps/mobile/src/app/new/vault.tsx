@@ -98,7 +98,7 @@ export default function NewVaultItem() {
       status: release === 'after_death' ? 'sealed' : 'scheduled',
     };
     addItem(newItem);
-    router.replace('/(tabs)/vault');
+    router.replace('/vault');
   }
 
   const canSave = title.trim().length > 0 && recipients.length > 0;

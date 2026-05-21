@@ -28,7 +28,14 @@ type Feature =
   | 'profile_tab_vault'
   | 'profile_tab_about'
   | 'view_vault_for_me'
-  | 'react_or_comment';
+  | 'react_or_comment'
+  | 'invite_extended'
+  | 'extended_member_profile'
+  | 'share_highlight_reel'
+  | 'upload_photo'
+  | 'invite_guest'
+  | 'add_poll'
+  | 'face_autotag';
 
 const COPY: Record<Feature, { title: string; message: string }> = {
   new_moment: {
@@ -52,9 +59,9 @@ const COPY: Record<Feature, { title: string; message: string }> = {
       'Record a voice, video, or text message, then choose when it should be released — a date, a birthday, an age milestone, a life event (first child, marriage, graduation), or after your passing with named verifiers. Optionally tie a dollar amount to a milestone — funds held in escrow until release.',
   },
   photo_book: {
-    title: 'Digitize a photo book',
+    title: 'Photo Book Capture — coming soon',
     message:
-      "Point your phone at each page of a physical photo album. Kin extracts every individual photo, OCRs handwritten captions, asks who's in each photo, and adds them to the right personal/branch/topic timelines. Your binder lives forever.",
+      "We're saving this for a later release. The vision: point your phone at each page of a physical photo album, and Kin extracts every individual photo, OCRs handwritten captions, asks who's in each photo, and adds them to the right timelines. It needs camera wiring and on-device AI before it's ready — but we wanted you to see where this is going. We'll notify you when it ships.",
   },
   search: {
     title: 'Search the family archive',
@@ -166,6 +173,41 @@ const COPY: Record<Feature, { title: string; message: string }> = {
     title: 'React or comment',
     message:
       'Tap to add a heart, a voice-note reply, or a text comment. Comments become part of the relationship timeline too.',
+  },
+  invite_extended: {
+    title: 'Add to your family tree',
+    message:
+      "Pick someone to add to your extended family — aunts, uncles, cousins, in-laws, family friends. Once they're in your tree, you can invite them to any future event without re-typing their info.",
+  },
+  extended_member_profile: {
+    title: 'Family-tree profile',
+    message:
+      "Extended-family profiles will show how they're related, which events you've shared with them, and any photos or chatter they've been part of.",
+  },
+  share_highlight_reel: {
+    title: 'Share the highlight reel',
+    message:
+      "Share the event's auto-generated highlight reel as a video — to a guest who missed it, a family chat, or social. Tapping it on a phone that doesn't have Kin opens a web preview + install prompt.",
+  },
+  upload_photo: {
+    title: 'Share a photo or video',
+    message:
+      'Pick from camera roll or capture new. Anything you share is scoped to this event and gets auto-considered for the highlight reel.',
+  },
+  invite_guest: {
+    title: 'Invite someone',
+    message:
+      "Pick from your family tree or invite by phone/email. They get a magic-link push; if they don't have Kin yet, the link opens a web preview of the event and lets them RSVP. Twilio SMS arrives in Phase 2.",
+  },
+  add_poll: {
+    title: 'New poll',
+    message:
+      'Pick a poll kind (date, location, activity, custom), write the prompt, add at least two options. Multi-select supported. Closes automatically before the event starts.',
+  },
+  face_autotag: {
+    title: "Auto-tag who's in each photo — coming soon",
+    message:
+      "As photos and videos roll in during an event, Kin will detect faces and match them to the people in your family tree — so you don't have to type \"that's Cousin Sara\" 60 times. Saved for a later release: it needs on-device face matching plus a smart backend pipeline, and we want to nail the cost model before turning it on. We'll let you know when it ships.",
   },
 };
 

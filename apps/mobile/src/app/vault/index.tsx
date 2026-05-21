@@ -7,6 +7,10 @@ import { MEMBERS, type VaultItem } from '../../lib/mockData';
 import { useVaultStore } from '../../lib/vaultStore';
 import { Avatar } from '../../components/Avatar';
 
+/**
+ * Vault — moved off the bottom tab bar. Still a real screen; accessed from
+ * Family → "Vault for the future" entry point, or via direct link.
+ */
 export default function VaultScreen() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'mine' | 'for_me'>('mine');
@@ -18,36 +22,55 @@ export default function VaultScreen() {
         contentContainerStyle={{
           paddingTop: insets.top + 8,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 120,
+          paddingBottom: insets.bottom + 40,
           gap: 20,
         }}
       >
-        {/* Header */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: '#A56627',
-              letterSpacing: 1.5,
-            }}
+        {/* Back + header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: tokens.color.bgPrimary,
+              borderWidth: 1,
+              borderColor: tokens.color.borderSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
           >
-            PRIVATE
-          </Text>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: tokens.color.textPrimary }}>
-            Vault
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              color: tokens.color.textSecondary,
-              marginTop: 4,
-              lineHeight: 22,
-            }}
-          >
-            Leave a message for the future. Choose when it should arrive.
-          </Text>
+            <Text style={{ fontSize: 22, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '700',
+                color: '#A56627',
+                letterSpacing: 1.5,
+              }}
+            >
+              PRIVATE
+            </Text>
+            <Text style={{ fontSize: 26, fontWeight: '700', color: tokens.color.textPrimary }}>
+              Vault
+            </Text>
+          </View>
         </View>
+
+        <Text
+          style={{
+            fontSize: 15,
+            color: tokens.color.textSecondary,
+            lineHeight: 21,
+          }}
+        >
+          Leave a message for the future. Choose when it should arrive.
+        </Text>
 
         {/* Segmented control */}
         <View

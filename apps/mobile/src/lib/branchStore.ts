@@ -9,20 +9,37 @@ import { BRANCHES, type BranchId, type Branch, type MemberId } from './mockData'
  */
 export type BranchSelection = BranchId | 'all';
 
+/**
+ * User's generational role within the family. Drives which Home hero shows:
+ *  - 'elder' (parent/grandparent) sees the "Answer today's prompt" card —
+ *    they're the ones with stories to tell.
+ *  - 'younger' (child/grandchild) sees the "Ask someone today" card — they're
+ *    the ones doing the asking.
+ *
+ * Stored here for v0; in Batch 1 this becomes a user-profile field set during
+ * onboarding (derived from the relationships they declared).
+ */
+export type UserRole = 'elder' | 'younger';
+
 interface BranchState {
   selection: BranchSelection;
   visibleBranchIds: BranchId[];
+  userRole: UserRole;
 
   setSelection: (s: BranchSelection) => void;
   cycle: () => void;
 
   enableBlendedDemo: () => void;
   disableBlendedDemo: () => void;
+
+  setUserRole: (r: UserRole) => void;
 }
 
 export const useBranchStore = create<BranchState>((set, get) => ({
   selection: 'pilks',
   visibleBranchIds: ['pilks'],
+  // Aaron is the child/asker in the Pilks family — default to 'younger'.
+  userRole: 'younger',
 
   setSelection: (s) => set({ selection: s }),
   cycle: () => {
@@ -36,7 +53,13 @@ export const useBranchStore = create<BranchState>((set, get) => ({
 
   enableBlendedDemo: () => set({ visibleBranchIds: ['pilks', 'stepfamily'], selection: 'all' }),
   disableBlendedDemo: () => set({ visibleBranchIds: ['pilks'], selection: 'pilks' }),
+
+  setUserRole: (r) => set({ userRole: r }),
 }));
+
+export function useUserRole(): UserRole {
+  return useBranchStore((s) => s.userRole);
+}
 
 /* ---------- hooks ---------- */
 

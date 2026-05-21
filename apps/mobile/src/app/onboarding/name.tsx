@@ -4,9 +4,12 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 
-export default function NameFamily() {
+export default function YourName() {
   const insets = useSafeAreaInsets();
-  const [name, setName] = useState('The Pilks');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
+  const canContinue = firstName.trim().length > 0;
 
   return (
     <KeyboardAvoidingView
@@ -34,7 +37,7 @@ export default function NameFamily() {
               lineHeight: 34,
             }}
           >
-            What should we call your family?
+            What's your name?
           </Text>
           <Text
             style={{
@@ -44,52 +47,96 @@ export default function NameFamily() {
               lineHeight: 22,
             }}
           >
-            You can change this later. It's just how the app refers to your group of people.
+            This is how the people you invite will see you. You can change it later.
           </Text>
 
           <View
             style={{
               marginTop: 32,
-              backgroundColor: tokens.color.bgPrimary,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: tokens.color.borderSubtle,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
+              gap: 12,
             }}
           >
-            <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginBottom: 4 }}>
-              FAMILY NAME
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g. The Pilks"
-              placeholderTextColor={tokens.color.textMuted}
-              style={{
-                fontSize: 22,
-                color: tokens.color.textPrimary,
-                fontWeight: '600',
-              }}
-            />
+            <Field label="FIRST NAME">
+              <TextInput
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Aaron"
+                placeholderTextColor={tokens.color.textMuted}
+                autoCapitalize="words"
+                autoComplete="given-name"
+                returnKeyType="next"
+                style={{
+                  fontSize: 22,
+                  color: tokens.color.textPrimary,
+                  fontWeight: '600',
+                }}
+              />
+            </Field>
+            <Field label="LAST NAME (OPTIONAL)">
+              <TextInput
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Pilkington"
+                placeholderTextColor={tokens.color.textMuted}
+                autoCapitalize="words"
+                autoComplete="family-name"
+                returnKeyType="done"
+                style={{
+                  fontSize: 22,
+                  color: tokens.color.textPrimary,
+                  fontWeight: '600',
+                }}
+              />
+            </Field>
           </View>
 
           <Text
             style={{
               fontSize: 13,
               color: tokens.color.textMuted,
-              marginTop: 12,
-              lineHeight: 18,
+              marginTop: 14,
+              lineHeight: 19,
             }}
           >
-            Most families use one group. If yours is more complex (divorced parents, in-laws, chosen
-            family), you can add more groups later from Settings.
+            Next you'll invite your immediate family. You can always add more people — cousins,
+            aunts, friends — later when you plan an event together.
           </Text>
         </View>
 
-        <PrimaryNext label="Continue" onPress={() => router.push('/onboarding/invite')} />
+        <PrimaryNext
+          label="Continue"
+          disabled={!canContinue}
+          onPress={() => router.push('/onboarding/invite')}
+        />
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View
+      style={{
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          color: tokens.color.textMuted,
+          marginBottom: 4,
+          fontWeight: '700',
+        }}
+      >
+        {label}
+      </Text>
+      {children}
+    </View>
   );
 }
 
@@ -127,12 +174,21 @@ export function OnboardingHeader({ step, total }: { step: number; total: number 
   );
 }
 
-export function PrimaryNext({ label, onPress }: { label: string; onPress: () => void }) {
+export function PrimaryNext({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => ({
-        backgroundColor: tokens.color.accentPrimary,
+        backgroundColor: disabled ? '#D8C7CC' : tokens.color.accentPrimary,
         opacity: pressed ? 0.85 : 1,
         height: 56,
         borderRadius: 999,

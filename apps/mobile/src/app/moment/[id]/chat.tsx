@@ -1,0 +1,485 @@
+import { useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+  Text,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { tokens } from '../../../theme/tokens';
+import {
+  MEMBERS,
+  ME,
+  getAnyMember,
+  type MomentMessage,
+  type MemberId,
+} from '../../../lib/mockData';
+import { useEvent, useEventStore } from '../../../lib/eventStore';
+import { Avatar } from '../../../components/Avatar';
+
+/**
+ * Group chat scoped to a single event. iMessage-style bubbles:
+ *  - own messages right-aligned, accent color
+ *  - others left-aligned, soft grey, avatar shown on the LAST message of a
+ *    streak (so the avatar sits at the bottom of the visual cluster)
+ *  - date separators ("Today", "Yesterday", weekday, full date) between
+ *    consecutive messages spanning days
+ *  - tappable header opens the guests list
+ *  - typing indicator placeholder (cosmetic until real presence wires in)
+ *
+ * For Reunion Mode v0 this is in-app only. The Twilio SMS bridge (PartyFull-
+ * style) lands in a later batch — when it does, this exact same activity
+ * feed becomes the source of truth for both surfaces.
+ */
+export default function EventChat() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const event = useEvent(id ?? '');
+  const postChatter = useEventStore((s) => s.postChatter);
+  const [draft, setDraft] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to bottom on mount + whenever the message list changes.
+  useEffect(() => {
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+  }, [event?.activity.length]);
+
+  // Cosmetic typing indicator — picks a random going-but-not-me guest the first
+  // time you open chat. Fades after a few seconds. Sells the "live" feeling.
+  const typingFrom = useMemo(() => {
+    if (!event) return null;
+    const candidates = event.guests.filter((g) => g.rsvp === 'going' && g.memberId !== ME);
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)]!.memberId;
+  }, [event?.id]);
+  const [typingVisible, setTypingVisible] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setTypingVisible(false), 4200);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!event) return null;
+
+  const submit = () => {
+    const body = draft.trim();
+    if (!body) return;
+    postChatter(event.id, body);
+    setDraft('');
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  };
+
+  // Build display list interleaved with date separators.
+  const items = buildItems(event.activity);
+  const going = event.guests.filter((g) => g.rsvp === 'going');
+  const recentSenders = uniqueRecentSenders(event.activity, 5);
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Header */}
+      <Pressable
+        onPress={() => router.push(`/moment/${event.id}/guests`)}
+        style={({ pressed }) => ({
+          paddingTop: insets.top + 8,
+          paddingBottom: 12,
+          paddingHorizontal: 14,
+          backgroundColor: tokens.color.bgPrimary,
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.color.borderSubtle,
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            style={({ pressed }) => ({
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: tokens.color.bgSecondary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ fontSize: 22, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}
+            >
+              {event.title}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <View style={{ flexDirection: 'row' }}>
+                {recentSenders.map((mid, i) => (
+                  <View
+                    key={mid}
+                    style={{
+                      marginLeft: i === 0 ? 0 : -6,
+                      borderWidth: 1.5,
+                      borderColor: tokens.color.bgPrimary,
+                      borderRadius: 999,
+                    }}
+                  >
+                    <Avatar member={getAnyMember(mid)} size="sm" />
+                  </View>
+                ))}
+              </View>
+              <Text style={{ fontSize: 12, color: tokens.color.textMuted }}>
+                · {going.length} going
+              </Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>
+        </View>
+      </Pressable>
+
+      {/* Messages */}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{
+          paddingHorizontal: 14,
+          paddingTop: 14,
+          paddingBottom: 14,
+          gap: 4,
+        }}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+      >
+        {items.map((item, i) => {
+          if (item.kind === 'separator') {
+            return <DateSeparator key={`sep-${i}`} label={item.label} />;
+          }
+          return (
+            <ChatBubble key={item.msg.id} msg={item.msg} first={item.first} last={item.last} />
+          );
+        })}
+
+        {typingVisible && typingFrom && <TypingBubble memberId={typingFrom} />}
+
+        {event.activity.length === 0 && (
+          <View
+            style={{
+              padding: 24,
+              backgroundColor: tokens.color.bgTinted,
+              borderRadius: 18,
+              gap: 8,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}>
+              No messages yet
+            </Text>
+            <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
+              Be the first one in — say hi, share logistics, drop a meme. Everyone going to{' '}
+              {event.title} will see it.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Composer */}
+      <View
+        style={{
+          paddingHorizontal: 10,
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 10),
+          backgroundColor: tokens.color.bgPrimary,
+          borderTopWidth: 1,
+          borderTopColor: tokens.color.borderSubtle,
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          gap: 8,
+        }}
+      >
+        <Pressable
+          onPress={() => {}}
+          hitSlop={6}
+          style={({ pressed }) => ({
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: tokens.color.bgSecondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 18, color: tokens.color.textMuted }}>+</Text>
+        </Pressable>
+        <View
+          style={{
+            flex: 1,
+            minHeight: 38,
+            maxHeight: 140,
+            backgroundColor: tokens.color.bgSecondary,
+            borderRadius: 20,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            justifyContent: 'center',
+          }}
+        >
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Message"
+            placeholderTextColor={tokens.color.textMuted}
+            multiline
+            style={{
+              fontSize: 16,
+              color: tokens.color.textPrimary,
+              lineHeight: 21,
+              maxHeight: 120,
+            }}
+            onSubmitEditing={submit}
+            blurOnSubmit={false}
+          />
+        </View>
+        <Pressable
+          onPress={submit}
+          disabled={draft.trim().length === 0}
+          style={({ pressed }) => ({
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: draft.trim().length === 0 ? '#D8C7CC' : tokens.color.accentPrimary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.8 : 1,
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 16, fontWeight: '800', marginTop: -2 }}>↑</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+// ---- Display item construction --------------------------------------------
+
+type DisplayItem =
+  | { kind: 'separator'; label: string }
+  | { kind: 'message'; msg: MomentMessage; first: boolean; last: boolean };
+
+function buildItems(msgs: MomentMessage[]): DisplayItem[] {
+  const out: DisplayItem[] = [];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i]!;
+    const prev = msgs[i - 1];
+    const next = msgs[i + 1];
+
+    // Date separator when the day changes between prev and current.
+    const prevDay = prev?.at ? dayKey(prev.at) : null;
+    const curDay = m.at ? dayKey(m.at) : null;
+    if (curDay && curDay !== prevDay) {
+      out.push({ kind: 'separator', label: dayLabel(m.at!) });
+    }
+
+    // Grouping: first/last in a same-author streak (also bounded by separators).
+    const dayChanges = Boolean(next?.at && curDay && dayKey(next.at) !== curDay);
+    const first = !prev || prev.authorId !== m.authorId || prevDay !== curDay;
+    const last = !next || next.authorId !== m.authorId || dayChanges;
+
+    out.push({ kind: 'message', msg: m, first, last });
+  }
+  return out;
+}
+
+function dayKey(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const ms = 24 * 60 * 60 * 1000;
+  const daysDiff = Math.floor((atMidnight(now).getTime() - atMidnight(d).getTime()) / ms);
+  if (daysDiff === 0) return 'Today';
+  if (daysDiff === 1) return 'Yesterday';
+  if (daysDiff >= 2 && daysDiff <= 6) {
+    return d.toLocaleDateString(undefined, { weekday: 'long' });
+  }
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function atMidnight(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+function uniqueRecentSenders(msgs: MomentMessage[], limit: number): MemberId[] {
+  const seen = new Set<MemberId>();
+  const out: MemberId[] = [];
+  for (let i = msgs.length - 1; i >= 0 && out.length < limit; i--) {
+    const a = msgs[i]!.authorId;
+    if (!seen.has(a)) {
+      seen.add(a);
+      out.push(a);
+    }
+  }
+  return out;
+}
+
+// ---- Sub-components -------------------------------------------------------
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 12 }}>
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: '700',
+          color: tokens.color.textMuted,
+          letterSpacing: 0.8,
+        }}
+      >
+        {label.toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+function ChatBubble({ msg, first, last }: { msg: MomentMessage; first: boolean; last: boolean }) {
+  const isMine = msg.authorId === ME;
+  const author = MEMBERS[msg.authorId as MemberId];
+  if (isMine) {
+    return (
+      <View style={{ alignSelf: 'flex-end', maxWidth: '78%', alignItems: 'flex-end' }}>
+        <View
+          style={{
+            backgroundColor: tokens.color.accentPrimary,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            borderRadius: 20,
+            borderBottomRightRadius: last ? 6 : 20,
+            borderTopRightRadius: first ? 20 : 6,
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 16, lineHeight: 21 }}>{msg.body}</Text>
+        </View>
+        {last && (
+          <Text
+            style={{ fontSize: 10, color: tokens.color.textMuted, marginTop: 3, marginRight: 4 }}
+          >
+            {msg.whenAgo}
+          </Text>
+        )}
+      </View>
+    );
+  }
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        maxWidth: '82%',
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        gap: 8,
+      }}
+    >
+      <View style={{ width: 32 }}>{last && <Avatar member={author} size="sm" />}</View>
+      <View style={{ flex: 0, alignItems: 'flex-start' }}>
+        {first && (
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: author.color,
+              marginBottom: 3,
+              marginLeft: 12,
+            }}
+          >
+            {author.name}
+          </Text>
+        )}
+        <View
+          style={{
+            backgroundColor: tokens.color.bgPrimary,
+            borderWidth: 1,
+            borderColor: tokens.color.borderSubtle,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            borderRadius: 20,
+            borderBottomLeftRadius: last ? 6 : 20,
+            borderTopLeftRadius: first ? 20 : 6,
+          }}
+        >
+          <Text style={{ color: tokens.color.textPrimary, fontSize: 16, lineHeight: 21 }}>
+            {msg.body}
+          </Text>
+        </View>
+        {last && (
+          <Text
+            style={{ fontSize: 10, color: tokens.color.textMuted, marginTop: 3, marginLeft: 12 }}
+          >
+            {msg.whenAgo}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function TypingBubble({ memberId }: { memberId: MemberId | string }) {
+  const m = getAnyMember(memberId as MemberId);
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        maxWidth: '60%',
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        gap: 8,
+        marginTop: 4,
+      }}
+    >
+      <View style={{ width: 32 }}>
+        <Avatar member={m} size="sm" />
+      </View>
+      <View
+        style={{
+          backgroundColor: tokens.color.bgPrimary,
+          borderWidth: 1,
+          borderColor: tokens.color.borderSubtle,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 20,
+          borderBottomLeftRadius: 6,
+          flexDirection: 'row',
+          gap: 4,
+        }}
+      >
+        <Dot />
+        <Dot delay={150} />
+        <Dot delay={300} />
+        <Text style={{ marginLeft: 6, fontSize: 12, color: tokens.color.textMuted }}>
+          {m.name} is typing…
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function Dot({ delay = 0 }: { delay?: number }) {
+  // Static dot for v0; animation would need Reanimated which adds complexity.
+  // Keeping the dot static still reads as "typing indicator" in context.
+  return (
+    <View
+      style={{
+        width: 5,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: tokens.color.textMuted,
+        opacity: 0.4 + (delay % 300) / 600,
+      }}
+    />
+  );
+}

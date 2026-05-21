@@ -3,8 +3,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { tokens } from '../../theme/tokens';
 
 /**
- * 5-tab bottom bar per spec §E.
- * Floating Ask button (the real one) lands in Batch 3 — for now Ask has its own tab.
+ * 5-tab bottom bar: Home / Ask / Events / Chats / Family.
+ * Vault moved off the bar (accessed from Family → "Vault for the future").
+ * Timeline moved off the bar (accessed from Family → "Timeline").
+ * Chats is the messaging hub — one row per event group chat for v0.
  */
 export default function TabsLayout() {
   return (
@@ -42,20 +44,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="vault"
+        name="events"
         options={{
-          title: 'Vault',
+          title: 'Events',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="lock-closed-outline" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="timeline"
+        name="chats"
         options={{
-          title: 'Timeline',
+          title: 'Chats',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
         }}
       />
