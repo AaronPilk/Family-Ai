@@ -46,6 +46,11 @@ jobs:
       - name: Apply migrations
         run: supabase db reset --debug
 
+      - name: Run pgTAP property tests
+        # Locks in the C1–C4 invariants from docs/SECURITY-REVIEW.md.
+        # Property tests must pass before real auth can be wired.
+        run: supabase test db
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -164,8 +164,8 @@ export default function NewEvent() {
             marginTop: -10,
           }}
         >
-          Invite everyone, lock in the dates and place, share what you're bringing. After it, Kin
-          stitches a highlight reel from everything you posted.
+          Invite everyone, lock in the dates and place, share what you're bringing. After it,
+          FamLink stitches a highlight reel from everything you posted.
         </Text>
 
         {/* Kind picker */}
@@ -389,7 +389,7 @@ export default function NewEvent() {
                 }}
               >
                 Cousins, aunts, uncles, in-laws, family friends. They get an invite even if they
-                haven't installed Kin yet.
+                haven't installed FamLink yet.
               </Text>
               <View style={{ gap: 8 }}>
                 {extendedPool.map((id) => {

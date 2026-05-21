@@ -324,7 +324,7 @@ export default function EventDetail() {
                     fontWeight: '700',
                   }}
                 >
-                  After {event.title.toLowerCase()} ends, Kin stitches a highlight reel.
+                  After {event.title.toLowerCase()} ends, FamLink stitches a highlight reel.
                 </Text>
                 <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 20 }}>
                   Best photos, the funniest moments, who won which vote, the planning chatter that

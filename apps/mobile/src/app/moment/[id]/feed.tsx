@@ -106,7 +106,7 @@ export default function EventFeed() {
             <Text
               style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 3, lineHeight: 17 }}
             >
-              When photos and videos roll in during {event.title}, Kin will auto-tag your family
+              When photos and videos roll in during {event.title}, FamLink will auto-tag your family
               members in each one.
             </Text>
           </View>

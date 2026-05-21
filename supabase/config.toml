@@ -1,5 +1,6 @@
 # Supabase project config — see https://supabase.com/docs/guides/cli/config
-project_id = "kin"
+# Project ref on supabase.com: yaogxksbhpiqmgjuuqnj (FamLink org)
+project_id = "famlink"
 
 [api]
 enabled = true
@@ -11,7 +12,9 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+# Match the hosted project's Postgres major version. Bumped from 15 → 17
+# after `supabase link` reported the mismatch.
+major_version = 17
 
 [db.seed]
 enabled = true
@@ -28,8 +31,10 @@ file_size_limit = "500MiB"
 
 [auth]
 enabled = true
-site_url = "kin://"
-additional_redirect_urls = ["kin://**"]
+# Deep-link scheme for magic-link redirects. Must match the iOS/Android
+# URL scheme registered in app.json (apps/mobile/app.json: scheme = "famlink").
+site_url = "famlink://"
+additional_redirect_urls = ["famlink://**"]
 jwt_expiry = 3600
 enable_signup = true
 

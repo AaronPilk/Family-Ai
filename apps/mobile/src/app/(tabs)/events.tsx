@@ -106,8 +106,9 @@ export default function EventsScreen() {
               No events yet
             </Text>
             <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
-              Start a reunion, vacation, or holiday gathering. Kin handles the invites, the chat,
-              the bring list, the votes, the photos — and stitches it into a highlight reel after.
+              Start a reunion, vacation, or holiday gathering. FamLink handles the invites, the
+              chat, the bring list, the votes, the photos — and stitches it into a highlight reel
+              after.
             </Text>
             <Pressable
               onPress={() => router.push('/new/event')}

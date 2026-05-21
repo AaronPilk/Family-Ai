@@ -163,7 +163,7 @@ export default function InviteImmediateFamily() {
             ))}
           </View>
           <Text style={{ fontSize: 12, color: tokens.color.textMuted, lineHeight: 18 }}>
-            Have a divorced/blended family? Add a Stepmom or Stepdad — Kin can keep their side
+            Have a divorced/blended family? Add a Stepmom or Stepdad — FamLink can keep their side
             separate from the other parent's side. (You'll see how on the next screen.)
           </Text>
         </View>

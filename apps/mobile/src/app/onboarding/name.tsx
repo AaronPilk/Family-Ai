@@ -1,43 +1,57 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
+
+type ChildRole = 'son' | 'daughter' | 'other';
 
 export default function YourName() {
   const insets = useSafeAreaInsets();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [bMonth, setBMonth] = useState('');
+  const [bDay, setBDay] = useState('');
+  const [bYear, setBYear] = useState('');
+  const [role, setRole] = useState<ChildRole | null>(null);
 
-  const canContinue = firstName.trim().length > 0;
+  const validBirthday = isValidDate(bMonth, bDay, bYear);
+  const canContinue = firstName.trim().length > 0 && validBirthday && role !== null;
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View
-        style={{
-          flex: 1,
+      <ScrollView
+        contentContainerStyle={{
           paddingTop: insets.top + 24,
           paddingBottom: insets.bottom + 24,
           paddingHorizontal: 24,
-          justifyContent: 'space-between',
+          gap: 24,
         }}
+        keyboardShouldPersistTaps="handled"
       >
-        <View>
-          <OnboardingHeader step={1} total={3} />
+        <OnboardingHeader step={1} total={3} />
 
+        <View>
           <Text
             style={{
               fontSize: 28,
               fontWeight: '700',
               color: tokens.color.textPrimary,
-              marginTop: 24,
               lineHeight: 34,
             }}
           >
-            What's your name?
+            Tell us about you.
           </Text>
           <Text
             style={{
@@ -49,69 +63,143 @@ export default function YourName() {
           >
             This is how the people you invite will see you. You can change it later.
           </Text>
+        </View>
 
-          <View
-            style={{
-              marginTop: 32,
-              gap: 12,
-            }}
-          >
-            <Field label="FIRST NAME">
-              <TextInput
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Aaron"
-                placeholderTextColor={tokens.color.textMuted}
-                autoCapitalize="words"
-                autoComplete="given-name"
-                returnKeyType="next"
-                style={{
-                  fontSize: 22,
-                  color: tokens.color.textPrimary,
-                  fontWeight: '600',
-                }}
-              />
-            </Field>
-            <Field label="LAST NAME (OPTIONAL)">
-              <TextInput
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Pilkington"
-                placeholderTextColor={tokens.color.textMuted}
-                autoCapitalize="words"
-                autoComplete="family-name"
-                returnKeyType="done"
-                style={{
-                  fontSize: 22,
-                  color: tokens.color.textPrimary,
-                  fontWeight: '600',
-                }}
-              />
-            </Field>
+        {/* Name */}
+        <View style={{ gap: 12 }}>
+          <Field label="FIRST NAME">
+            <TextInput
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Aaron"
+              placeholderTextColor={tokens.color.textMuted}
+              autoCapitalize="words"
+              autoComplete="given-name"
+              returnKeyType="next"
+              style={{
+                fontSize: 22,
+                color: tokens.color.textPrimary,
+                fontWeight: '600',
+              }}
+            />
+          </Field>
+          <Field label="LAST NAME (OPTIONAL)">
+            <TextInput
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Pilkington"
+              placeholderTextColor={tokens.color.textMuted}
+              autoCapitalize="words"
+              autoComplete="family-name"
+              returnKeyType="next"
+              style={{
+                fontSize: 22,
+                color: tokens.color.textPrimary,
+                fontWeight: '600',
+              }}
+            />
+          </Field>
+        </View>
+
+        {/* Birthday */}
+        <View style={{ gap: 8 }}>
+          <Text style={{ fontSize: 12, color: tokens.color.textMuted, fontWeight: '700' }}>
+            WHEN'S YOUR BIRTHDAY?
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <DateBox
+              flex={1}
+              label="MM"
+              value={bMonth}
+              onChange={(v) => setBMonth(clampDigits(v, 2))}
+              maxLength={2}
+            />
+            <DateBox
+              flex={1}
+              label="DD"
+              value={bDay}
+              onChange={(v) => setBDay(clampDigits(v, 2))}
+              maxLength={2}
+            />
+            <DateBox
+              flex={1.4}
+              label="YYYY"
+              value={bYear}
+              onChange={(v) => setBYear(clampDigits(v, 4))}
+              maxLength={4}
+            />
           </View>
+          {bMonth || bDay || bYear ? (
+            <Text
+              style={{
+                fontSize: 12,
+                color: validBirthday ? tokens.color.success : tokens.color.warning,
+                marginTop: 2,
+              }}
+            >
+              {validBirthday
+                ? `Born ${formatBirthday(bMonth, bDay, bYear)} · ${ageFrom(bMonth, bDay, bYear)} years old`
+                : 'Enter a real date'}
+            </Text>
+          ) : (
+            <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
+              Used for birthday vault releases, age-aware prompts, and "happy birthday" pings.
+            </Text>
+          )}
+        </View>
 
-          <Text
-            style={{
-              fontSize: 13,
-              color: tokens.color.textMuted,
-              marginTop: 14,
-              lineHeight: 19,
-            }}
-          >
-            Next you'll invite your immediate family. You can always add more people — cousins,
-            aunts, friends — later when you plan an event together.
+        {/* Son / Daughter */}
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 12, color: tokens.color.textMuted, fontWeight: '700' }}>
+            ARE YOU A…
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <RolePill
+              label="Son"
+              glyph="👦"
+              active={role === 'son'}
+              onPress={() => setRole('son')}
+            />
+            <RolePill
+              label="Daughter"
+              glyph="👧"
+              active={role === 'daughter'}
+              onPress={() => setRole('daughter')}
+            />
+            <RolePill
+              label="Confused about gender"
+              glyph="🌱"
+              active={role === 'other'}
+              onPress={() => setRole('other')}
+            />
+          </View>
+          <Text style={{ fontSize: 12, color: tokens.color.textMuted, lineHeight: 17 }}>
+            Helps your family see "Mom's daughter" / "Dad's son" the right way around in the tree.
           </Text>
         </View>
+
+        <Text
+          style={{
+            fontSize: 13,
+            color: tokens.color.textMuted,
+            lineHeight: 19,
+          }}
+        >
+          Next you'll invite your immediate family. You can always add more people — cousins, aunts,
+          friends — later when you plan an event together.
+        </Text>
 
         <PrimaryNext
           label="Continue"
           disabled={!canContinue}
           onPress={() => router.push('/onboarding/invite')}
         />
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+// ---- Sub-components --------------------------------------------------------
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -139,6 +227,148 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </View>
   );
 }
+
+function DateBox({
+  label,
+  value,
+  onChange,
+  maxLength,
+  flex,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  maxLength: number;
+  flex: number;
+}) {
+  return (
+    <View
+      style={{
+        flex,
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+      }}
+    >
+      <Text style={{ fontSize: 10, color: tokens.color.textMuted, fontWeight: '700' }}>
+        {label}
+      </Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={label}
+        placeholderTextColor={tokens.color.borderStrong}
+        keyboardType="number-pad"
+        maxLength={maxLength}
+        style={{
+          fontSize: 20,
+          fontWeight: '600',
+          color: tokens.color.textPrimary,
+          marginTop: 2,
+        }}
+      />
+    </View>
+  );
+}
+
+function RolePill({
+  label,
+  glyph,
+  active,
+  onPress,
+}: {
+  label: string;
+  glyph: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        paddingVertical: 14,
+        paddingHorizontal: 10,
+        borderRadius: 14,
+        backgroundColor: active ? tokens.color.accentPrimary : tokens.color.bgPrimary,
+        borderWidth: 1.5,
+        borderColor: active ? tokens.color.accentPrimary : tokens.color.borderSubtle,
+        alignItems: 'center',
+        gap: 4,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text style={{ fontSize: 22 }}>{glyph}</Text>
+      <Text
+        style={{
+          fontSize: 13,
+          fontWeight: '700',
+          color: active ? 'white' : tokens.color.textPrimary,
+          textAlign: 'center',
+        }}
+        numberOfLines={2}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ---- Helpers ---------------------------------------------------------------
+
+function clampDigits(v: string, max: number): string {
+  return v.replace(/[^0-9]/g, '').slice(0, max);
+}
+
+function isValidDate(mm: string, dd: string, yyyy: string): boolean {
+  if (mm.length === 0 || dd.length === 0 || yyyy.length !== 4) return false;
+  const m = Number(mm);
+  const d = Number(dd);
+  const y = Number(yyyy);
+  if (!Number.isFinite(m) || !Number.isFinite(d) || !Number.isFinite(y)) return false;
+  if (m < 1 || m > 12) return false;
+  if (d < 1 || d > 31) return false;
+  const thisYear = new Date().getFullYear();
+  if (y < 1900 || y > thisYear) return false;
+  // Real-calendar sanity check (Feb 30, etc.)
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
+function formatBirthday(mm: string, dd: string, yyyy: string): string {
+  const m = Number(mm);
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return `${months[m - 1]} ${Number(dd)}, ${yyyy}`;
+}
+
+function ageFrom(mm: string, dd: string, yyyy: string): number {
+  const y = Number(yyyy);
+  const m = Number(mm);
+  const d = Number(dd);
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  const hasHadBirthday = now.getMonth() + 1 > m || (now.getMonth() + 1 === m && now.getDate() >= d);
+  if (!hasHadBirthday) age -= 1;
+  return age;
+}
+
+// ---- Re-exports used by other onboarding screens ---------------------------
 
 export function OnboardingHeader({ step, total }: { step: number; total: number }) {
   return (

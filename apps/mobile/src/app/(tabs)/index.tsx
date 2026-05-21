@@ -309,9 +309,9 @@ export default function HomeScreen() {
                 lineHeight: 20,
               }}
             >
-              Point your phone at each page. Kin will extract every photo, date them, and ask who's
-              in them — so your binder lives forever. (Tap for details — we'll let you know when
-              it's ready.)
+              Point your phone at each page. FamLink will extract every photo, date them, and ask
+              who's in them — so your binder lives forever. (Tap for details — we'll let you know
+              when it's ready.)
             </Text>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 14 }}>
               {PHOTO_BOOKS.map((b) => (

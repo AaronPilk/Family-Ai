@@ -1,20 +1,41 @@
 {
   "expo": {
-    "name": "Kin",
-    "slug": "kin",
+    "name": "FamLink",
+    "slug": "famlink",
     "version": "0.0.1",
     "orientation": "portrait",
-    "scheme": "kin",
+    "scheme": "famlink",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "assetBundlePatterns": ["**/*"],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFBFA"
+    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.kin.app"
+      "bundleIdentifier": "com.famlink.app",
+      "icon": "./assets/icon.png"
     },
     "android": {
-      "package": "com.kin.app"
+      "package": "com.famlink.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFBFA"
+      }
     },
-    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png",
+      "name": "FamLink",
+      "shortName": "FamLink",
+      "description": "Family memories that last forever.",
+      "themeColor": "#C0345C",
+      "backgroundColor": "#FFFBFA"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
     }

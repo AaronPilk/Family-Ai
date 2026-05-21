@@ -8,6 +8,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme, View } from 'react-native';
 import tamaguiConfig from '../../tamagui.config';
 import { tokens } from '../theme/tokens';
+import { initSession } from '../lib/sessionStore';
+
+// Boot the auth subscription once before any screen renders.
+initSession();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

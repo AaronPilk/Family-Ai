@@ -61,7 +61,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   photo_book: {
     title: 'Photo Book Capture — coming soon',
     message:
-      "We're saving this for a later release. The vision: point your phone at each page of a physical photo album, and Kin extracts every individual photo, OCRs handwritten captions, asks who's in each photo, and adds them to the right timelines. It needs camera wiring and on-device AI before it's ready — but we wanted you to see where this is going. We'll notify you when it ships.",
+      "We're saving this for a later release. The vision: point your phone at each page of a physical photo album, and FamLink extracts every individual photo, OCRs handwritten captions, asks who's in each photo, and adds them to the right timelines. It needs camera wiring and on-device AI before it's ready — but we wanted you to see where this is going. We'll notify you when it ships.",
   },
   search: {
     title: 'Search the family archive',
@@ -147,7 +147,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   generate_book: {
     title: 'Generate a book',
     message:
-      'Kin compiles every memory authored by this person — answers, posts, voice notes, photos — into a printable book. AI writes the chapter headings; you review and edit before printing. Hardcover ships in ~10 days.',
+      'FamLink compiles every memory authored by this person — answers, posts, voice notes, photos — into a printable book. AI writes the chapter headings; you review and edit before printing. Hardcover ships in ~10 days.',
   },
   profile_tab_questions: {
     title: 'Questions',
@@ -187,7 +187,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   share_highlight_reel: {
     title: 'Share the highlight reel',
     message:
-      "Share the event's auto-generated highlight reel as a video — to a guest who missed it, a family chat, or social. Tapping it on a phone that doesn't have Kin opens a web preview + install prompt.",
+      "Share the event's auto-generated highlight reel as a video — to a guest who missed it, a family chat, or social. Tapping it on a phone that doesn't have FamLink opens a web preview + install prompt.",
   },
   upload_photo: {
     title: 'Share a photo or video',
@@ -197,7 +197,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   invite_guest: {
     title: 'Invite someone',
     message:
-      "Pick from your family tree or invite by phone/email. They get a magic-link push; if they don't have Kin yet, the link opens a web preview of the event and lets them RSVP. Twilio SMS arrives in Phase 2.",
+      "Pick from your family tree or invite by phone/email. They get a magic-link push; if they don't have FamLink yet, the link opens a web preview of the event and lets them RSVP. Twilio SMS arrives in Phase 2.",
   },
   add_poll: {
     title: 'New poll',
@@ -207,7 +207,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   face_autotag: {
     title: "Auto-tag who's in each photo — coming soon",
     message:
-      "As photos and videos roll in during an event, Kin will detect faces and match them to the people in your family tree — so you don't have to type \"that's Cousin Sara\" 60 times. Saved for a later release: it needs on-device face matching plus a smart backend pipeline, and we want to nail the cost model before turning it on. We'll let you know when it ships.",
+      "As photos and videos roll in during an event, FamLink will detect faces and match them to the people in your family tree — so you don't have to type \"that's Cousin Sara\" 60 times. Saved for a later release: it needs on-device face matching plus a smart backend pipeline, and we want to nail the cost model before turning it on. We'll let you know when it ships.",
   },
 };
 

@@ -28,7 +28,7 @@ export default function HowItWorks() {
               lineHeight: 34,
             }}
           >
-            How Kin works.
+            How FamLink works.
           </Text>
           <Text
             style={{
@@ -111,11 +111,11 @@ export default function HowItWorks() {
           />
           <Principle
             title="There's no algorithm."
-            body="No likes, no streaks, no public posts. Kin is just for the people you invited."
+            body="No likes, no streaks, no public posts. FamLink is just for the people you invited."
           />
         </View>
 
-        <PrimaryNext label="Enter Kin" onPress={() => router.replace('/(tabs)')} />
+        <PrimaryNext label="Enter FamLink" onPress={() => router.replace('/(tabs)')} />
       </ScrollView>
     </View>
   );
