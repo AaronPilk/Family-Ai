@@ -6,7 +6,6 @@ import { tokens } from '../../theme/tokens';
 import { MEMBERS, type VaultItem } from '../../lib/mockData';
 import { useVaultStore } from '../../lib/vaultStore';
 import { Avatar } from '../../components/Avatar';
-import { comingSoon } from '../../lib/comingSoon';
 
 export default function VaultScreen() {
   const insets = useSafeAreaInsets();

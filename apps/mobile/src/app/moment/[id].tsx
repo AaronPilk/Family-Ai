@@ -107,47 +107,61 @@ export default function MomentDetail() {
           {/* Date vote */}
           {moment.datePoll && (
             <Section title="Pick the dates">
-              <PollList
-                options={moment.datePoll}
-                totalVoters={moment.participantIds.length}
-                onToggle={(optId) => toggleVote(moment.id, 'datePoll', optId)}
-              />
+              {moment.datePoll.length > 0 ? (
+                <PollList
+                  options={moment.datePoll}
+                  totalVoters={moment.participantIds.length}
+                  onToggle={(optId) => toggleVote(moment.id, 'datePoll', optId)}
+                />
+              ) : (
+                <EmptyHint copy="No date options yet. Propose one and the family will vote." />
+              )}
+              <AddOptionButton label="+ Propose a date" />
             </Section>
           )}
 
           {/* Location vote */}
           {moment.locationPoll && (
             <Section title="Pick the place">
-              <PollList
-                options={moment.locationPoll}
-                totalVoters={moment.participantIds.length}
-                richCards
-                onToggle={(optId) => toggleVote(moment.id, 'locationPoll', optId)}
-              />
+              {moment.locationPoll.length > 0 ? (
+                <PollList
+                  options={moment.locationPoll}
+                  totalVoters={moment.participantIds.length}
+                  richCards
+                  onToggle={(optId) => toggleVote(moment.id, 'locationPoll', optId)}
+                />
+              ) : (
+                <EmptyHint copy="No places suggested yet. Drop an Airbnb, hotel, or cabin." />
+              )}
+              <AddOptionButton label="+ Propose a place" />
             </Section>
           )}
 
           {/* Packing list */}
           {moment.packingList && (
             <Section title="Who's bringing what">
-              <View
-                style={{
-                  backgroundColor: tokens.color.bgPrimary,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: tokens.color.borderSubtle,
-                  overflow: 'hidden',
-                }}
-              >
-                {moment.packingList.map((p, idx) => (
-                  <PackingRow
-                    key={p.id}
-                    item={p}
-                    last={idx === moment.packingList!.length - 1}
-                    onToggle={() => togglePacking(moment.id, p.id)}
-                  />
-                ))}
-              </View>
+              {moment.packingList.length > 0 ? (
+                <View
+                  style={{
+                    backgroundColor: tokens.color.bgPrimary,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: tokens.color.borderSubtle,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {moment.packingList.map((p, idx) => (
+                    <PackingRow
+                      key={p.id}
+                      item={p}
+                      last={idx === moment.packingList!.length - 1}
+                      onToggle={() => togglePacking(moment.id, p.id)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <EmptyHint copy="Nothing on the list yet. Start with the first item." />
+              )}
               <Pressable
                 onPress={() => comingSoon('add_to_packing')}
                 style={({ pressed }) => ({
@@ -406,5 +420,52 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </Text>
       {children}
     </View>
+  );
+}
+
+function EmptyHint({ copy }: { copy: string }) {
+  return (
+    <View
+      style={{
+        padding: 16,
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+        borderStyle: 'dashed',
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 14,
+          color: tokens.color.textMuted,
+          textAlign: 'center',
+          lineHeight: 20,
+        }}
+      >
+        {copy}
+      </Text>
+    </View>
+  );
+}
+
+function AddOptionButton({ label }: { label: string }) {
+  return (
+    <Pressable
+      onPress={() => comingSoon('add_poll_option')}
+      style={({ pressed }) => ({
+        marginTop: 10,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: tokens.color.bgTinted,
+        borderRadius: 999,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600', fontSize: 13 }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }

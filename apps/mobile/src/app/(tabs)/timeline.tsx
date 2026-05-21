@@ -20,7 +20,6 @@ import {
 } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 import { BranchSwitcher } from '../../components/BranchSwitcher';
-import { comingSoon } from '../../lib/comingSoon';
 
 type Segment = 'mine' | 'family' | 'people' | 'topics';
 const SEGMENTS: Segment[] = ['mine', 'family', 'people', 'topics'];

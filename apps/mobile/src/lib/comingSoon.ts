@@ -22,6 +22,7 @@ type Feature =
   | 'open_topic'
   | 'message_everyone'
   | 'add_to_packing'
+  | 'add_poll_option'
   | 'generate_book'
   | 'profile_tab_questions'
   | 'profile_tab_vault'
@@ -130,6 +131,11 @@ const COPY: Record<Feature, { title: string; message: string }> = {
     title: 'Add to the packing list',
     message:
       'Type an item, assign someone, set a status. Family members can check things off as they\'re packed or bought.',
+  },
+  add_poll_option: {
+    title: 'Propose an option',
+    message:
+      'Add a date window or a location card to this Moment\'s poll. The family votes; the winner becomes the plan.',
   },
   generate_book: {
     title: 'Generate a book',

@@ -6,11 +6,13 @@ import { tokens } from '../../theme/tokens';
 import {
   FEED,
   MEMBERS,
-  MEMBER_LIST,
   TOPICS,
   MOMENTS,
   type FeedItem,
+  type Member,
 } from '../../lib/mockData';
+
+const PEOPLE: Member[] = Object.values(MEMBERS).filter((m) => m.id !== 'me');
 import { useScopedBranchIds } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 
@@ -36,7 +38,7 @@ export default function SearchScreen() {
 
   const peopleHits = useMemo(() => {
     if (!ql) return [];
-    return MEMBER_LIST.filter(
+    return PEOPLE.filter(
       (m) =>
         m.name.toLowerCase().includes(ql) || m.relationship.toLowerCase().includes(ql),
     );

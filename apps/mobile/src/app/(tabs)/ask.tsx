@@ -45,6 +45,13 @@ export default function AskScreen() {
     }
   }, [params.preselect, branchMembers]);
 
+  // Reset selection when branch changes and current selection is no longer in scope
+  useEffect(() => {
+    if (selected && !branchMembers.find((m) => m.id === selected)) {
+      setSelected(branchMembers[0]?.id ?? null);
+    }
+  }, [selected, branchMembers]);
+
   const suggested = SUGGESTED_QUESTIONS.filter((s) => scopedIds.includes(s.branchId));
 
   function handleSuggestedTap(s: { ask: MemberId; text: string }) {
@@ -57,11 +64,6 @@ export default function AskScreen() {
     comingSoon('send_question');
     // After "send", clear and pop back to Home so the demo feels alive
     setDraft('');
-  }
-
-  // Reset selection when branch changes and current selection is no longer in scope
-  if (selected && !branchMembers.find((m) => m.id === selected)) {
-    setSelected(branchMembers[0]?.id ?? null);
   }
 
   return (
