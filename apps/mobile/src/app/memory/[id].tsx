@@ -57,7 +57,9 @@ export default function MemoryDetail() {
         )}
 
         {/* Author */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20 }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20 }}
+        >
           <Pressable onPress={() => router.push(`/member/${memory.authorId}`)}>
             <Avatar member={author} size="lg" />
           </Pressable>
@@ -125,7 +127,9 @@ export default function MemoryDetail() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Pressable
-                onPress={() => comingSoon(memory.mediaKind === 'voice' ? 'record_voice' : 'record_video')}
+                onPress={() =>
+                  comingSoon(memory.mediaKind === 'voice' ? 'record_voice' : 'record_video')
+                }
                 style={({ pressed }) => ({
                   width: 56,
                   height: 56,
@@ -143,7 +147,8 @@ export default function MemoryDetail() {
                   {memory.mediaKind === 'voice' ? 'Voice memory' : 'Video memory'}
                 </Text>
                 <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2 }}>
-                  {Math.floor((memory.durationSec ?? 0) / 60)}:{String((memory.durationSec ?? 0) % 60).padStart(2, '0')}
+                  {Math.floor((memory.durationSec ?? 0) / 60)}:
+                  {String((memory.durationSec ?? 0) % 60).padStart(2, '0')}
                 </Text>
               </View>
             </View>
@@ -189,7 +194,9 @@ export default function MemoryDetail() {
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ fontSize: 12, color: tokens.color.accentPrimary, fontWeight: '600' }}>
+                <Text
+                  style={{ fontSize: 12, color: tokens.color.accentPrimary, fontWeight: '600' }}
+                >
                   {t}
                 </Text>
               </View>
@@ -214,8 +221,16 @@ export default function MemoryDetail() {
             alignItems: 'center',
           }}
         >
-          <FooterAction icon="♡" label={`${memory.reactions}`} onPress={() => comingSoon('react_or_comment')} />
-          <FooterAction icon="💬" label={`${memory.comments}`} onPress={() => comingSoon('react_or_comment')} />
+          <FooterAction
+            icon="♡"
+            label={`${memory.reactions}`}
+            onPress={() => comingSoon('react_or_comment')}
+          />
+          <FooterAction
+            icon="💬"
+            label={`${memory.comments}`}
+            onPress={() => comingSoon('react_or_comment')}
+          />
           <Pressable
             onPress={() => comingSoon('react_or_comment')}
             style={({ pressed }) => ({
@@ -232,9 +247,7 @@ export default function MemoryDetail() {
         </View>
 
         {/* Branch chip */}
-        <View
-          style={{ flexDirection: 'row', paddingHorizontal: 20, alignItems: 'center', gap: 8 }}
-        >
+        <View style={{ flexDirection: 'row', paddingHorizontal: 20, alignItems: 'center', gap: 8 }}>
           <View
             style={{
               width: 8,
@@ -297,7 +310,15 @@ function BackHeader({ insets, title }: { insets: { top: number }; title: string 
   );
 }
 
-function FooterAction({ icon, label, onPress }: { icon: string; label: string; onPress?: () => void }) {
+function FooterAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  onPress?: () => void;
+}) {
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -310,12 +331,19 @@ function FooterAction({ icon, label, onPress }: { icon: string; label: string; o
 
 function topicQuestionFor(topic: string): string {
   switch (topic) {
-    case 'Food': return 'What did you eat with Chicken in a Biskit crackers as a kid?';
-    case 'Love': return 'What did you think the first time you held me?';
-    case 'Music': return 'What music were you listening to at my age?';
-    case 'Childhood': return 'What is your earliest memory?';
-    case 'Holidays': return 'What was your favorite holiday growing up?';
-    case 'Recipes': return 'Is there a recipe you want me to remember?';
-    default: return 'A question from your family.';
+    case 'Food':
+      return 'What did you eat with Chicken in a Biskit crackers as a kid?';
+    case 'Love':
+      return 'What did you think the first time you held me?';
+    case 'Music':
+      return 'What music were you listening to at my age?';
+    case 'Childhood':
+      return 'What is your earliest memory?';
+    case 'Holidays':
+      return 'What was your favorite holiday growing up?';
+    case 'Recipes':
+      return 'Is there a recipe you want me to remember?';
+    default:
+      return 'A question from your family.';
   }
 }

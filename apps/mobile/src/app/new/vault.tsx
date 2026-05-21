@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { MEMBERS, BRANCHES, ME, type MemberId, type VaultItem, type VaultMediaKind } from '../../lib/mockData';
+import {
+  MEMBERS,
+  BRANCHES,
+  ME,
+  type MemberId,
+  type VaultItem,
+  type VaultMediaKind,
+} from '../../lib/mockData';
 import { useVaultStore } from '../../lib/vaultStore';
 import { useScopedBranchIds } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
@@ -21,17 +28,17 @@ type ReleaseKind = 'on_date' | 'on_birthday' | 'on_age' | 'on_milestone' | 'afte
 const MEDIA_OPTIONS: { id: VaultMediaKind; label: string; glyph: string }[] = [
   { id: 'voice', label: 'Voice', glyph: '🎤' },
   { id: 'video', label: 'Video', glyph: '🎥' },
-  { id: 'text',  label: 'Letter', glyph: '✉️' },
+  { id: 'text', label: 'Letter', glyph: '✉️' },
   { id: 'money', label: 'Money', glyph: '$' },
 ];
 
 const RELEASE_OPTIONS: { id: ReleaseKind; label: string; sub: string }[] = [
-  { id: 'on_date',      label: 'A specific date',     sub: 'e.g. Jan 1, 2030' },
-  { id: 'on_birthday',  label: 'Their birthday',      sub: 'Any year' },
-  { id: 'on_age',       label: 'When they reach an age', sub: 'e.g. when Sara turns 18' },
-  { id: 'on_milestone', label: 'A life milestone',    sub: 'First child, marriage, graduation' },
-  { id: 'after_death',  label: 'After I pass',         sub: 'Verified by 2 family members' },
-  { id: 'manual',       label: 'Manually, later',     sub: 'Release whenever you choose' },
+  { id: 'on_date', label: 'A specific date', sub: 'e.g. Jan 1, 2030' },
+  { id: 'on_birthday', label: 'Their birthday', sub: 'Any year' },
+  { id: 'on_age', label: 'When they reach an age', sub: 'e.g. when Sara turns 18' },
+  { id: 'on_milestone', label: 'A life milestone', sub: 'First child, marriage, graduation' },
+  { id: 'after_death', label: 'After I pass', sub: 'Verified by 2 family members' },
+  { id: 'manual', label: 'Manually, later', sub: 'Release whenever you choose' },
 ];
 
 export default function NewVaultItem() {
@@ -59,12 +66,20 @@ export default function NewVaultItem() {
 
   function releaseSummary(): string {
     switch (release) {
-      case 'on_date':      return releaseDetail ? `Releases on ${releaseDetail}` : 'Releases on a date';
-      case 'on_birthday':  return releaseDetail ? `Releases on ${releaseDetail}'s birthday` : 'Releases on their birthday';
-      case 'on_age':       return releaseDetail ? `Releases when ${releaseDetail}` : 'Releases at age N';
-      case 'on_milestone': return releaseDetail ? `Releases on ${releaseDetail}` : 'Releases on a milestone';
-      case 'after_death':  return 'Releases after my passing (verified)';
-      case 'manual':       return 'Sealed until you release it';
+      case 'on_date':
+        return releaseDetail ? `Releases on ${releaseDetail}` : 'Releases on a date';
+      case 'on_birthday':
+        return releaseDetail
+          ? `Releases on ${releaseDetail}'s birthday`
+          : 'Releases on their birthday';
+      case 'on_age':
+        return releaseDetail ? `Releases when ${releaseDetail}` : 'Releases at age N';
+      case 'on_milestone':
+        return releaseDetail ? `Releases on ${releaseDetail}` : 'Releases on a milestone';
+      case 'after_death':
+        return 'Releases after my passing (verified)';
+      case 'manual':
+        return 'Sealed until you release it';
     }
   }
 
@@ -103,7 +118,8 @@ export default function NewVaultItem() {
             Leave a message for the future
           </Text>
           <Text style={{ fontSize: 15, color: tokens.color.textSecondary, lineHeight: 22 }}>
-            Sealed until your release rule fires. The recipient gets a gentle notification when it's time.
+            Sealed until your release rule fires. The recipient gets a gentle notification when it's
+            time.
           </Text>
         </View>
 
@@ -141,7 +157,9 @@ export default function NewVaultItem() {
                   })}
                 >
                   <Text style={{ fontSize: 20 }}>{m.glyph}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: tokens.color.textPrimary }}>
+                  <Text
+                    style={{ fontSize: 12, fontWeight: '600', color: tokens.color.textPrimary }}
+                  >
                     {m.label}
                   </Text>
                 </Pressable>
@@ -189,7 +207,9 @@ export default function NewVaultItem() {
                 >
                   <Avatar member={m} size="sm" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}
+                    >
                       {m.name}
                     </Text>
                     <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
@@ -203,12 +223,16 @@ export default function NewVaultItem() {
                       borderRadius: 11,
                       backgroundColor: included ? tokens.color.accentPrimary : 'transparent',
                       borderWidth: 2,
-                      borderColor: included ? tokens.color.accentPrimary : tokens.color.borderStrong,
+                      borderColor: included
+                        ? tokens.color.accentPrimary
+                        : tokens.color.borderStrong,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {included && <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>✓</Text>}
+                    {included && (
+                      <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>✓</Text>
+                    )}
                   </View>
                 </Pressable>
               );
@@ -236,7 +260,9 @@ export default function NewVaultItem() {
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}>
+                  <Text
+                    style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}
+                  >
                     {opt.label}
                   </Text>
                   <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 4 }}>
@@ -257,8 +283,8 @@ export default function NewVaultItem() {
                     : release === 'on_birthday'
                       ? "e.g. Sara's birthday"
                       : release === 'on_age'
-                        ? "Sara turns 18"
-                        : "first child / marriage / graduation"
+                        ? 'Sara turns 18'
+                        : 'first child / marriage / graduation'
                 }
                 placeholderTextColor={tokens.color.textMuted}
                 style={{ fontSize: 16, color: tokens.color.textPrimary }}
@@ -279,9 +305,7 @@ export default function NewVaultItem() {
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>
-            Seal it
-          </Text>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>Seal it</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -300,7 +324,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         paddingVertical: 12,
       }}
     >
-      <Text style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}>
+      <Text
+        style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}
+      >
         {label}
       </Text>
       {children}

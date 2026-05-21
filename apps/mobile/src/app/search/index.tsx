@@ -3,14 +3,7 @@ import { router } from 'expo-router';
 import { ScrollView, View, Text, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import {
-  FEED,
-  MEMBERS,
-  TOPICS,
-  MOMENTS,
-  type FeedItem,
-  type Member,
-} from '../../lib/mockData';
+import { FEED, MEMBERS, TOPICS, MOMENTS, type FeedItem, type Member } from '../../lib/mockData';
 
 const PEOPLE: Member[] = Object.values(MEMBERS).filter((m) => m.id !== 'me');
 import { useScopedBranchIds } from '../../lib/branchStore';
@@ -27,20 +20,18 @@ export default function SearchScreen() {
 
   const memoryHits = useMemo(() => {
     if (!ql) return [];
-    return FEED.filter((f) => scopedIds.includes(f.branchId))
-      .filter(
-        (f) =>
-          (f.body && f.body.toLowerCase().includes(ql)) ||
-          (f.topic && f.topic.toLowerCase().includes(ql)) ||
-          (f.mediaCaption && f.mediaCaption.toLowerCase().includes(ql)),
-      );
+    return FEED.filter((f) => scopedIds.includes(f.branchId)).filter(
+      (f) =>
+        (f.body && f.body.toLowerCase().includes(ql)) ||
+        (f.topic && f.topic.toLowerCase().includes(ql)) ||
+        (f.mediaCaption && f.mediaCaption.toLowerCase().includes(ql)),
+    );
   }, [ql, scopedIds]);
 
   const peopleHits = useMemo(() => {
     if (!ql) return [];
     return PEOPLE.filter(
-      (m) =>
-        m.name.toLowerCase().includes(ql) || m.relationship.toLowerCase().includes(ql),
+      (m) => m.name.toLowerCase().includes(ql) || m.relationship.toLowerCase().includes(ql),
     );
   }, [ql]);
 
@@ -158,7 +149,9 @@ export default function SearchScreen() {
                     })}
                   >
                     <Text style={{ fontSize: 14 }}>🕘</Text>
-                    <Text style={{ flex: 1, fontSize: 15, color: tokens.color.textPrimary }}>{r}</Text>
+                    <Text style={{ flex: 1, fontSize: 15, color: tokens.color.textPrimary }}>
+                      {r}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
@@ -181,7 +174,9 @@ export default function SearchScreen() {
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
-                    <Text style={{ fontSize: 14, color: tokens.color.accentPrimary, fontWeight: '600' }}>
+                    <Text
+                      style={{ fontSize: 14, color: tokens.color.accentPrimary, fontWeight: '600' }}
+                    >
                       {s}
                     </Text>
                   </Pressable>
@@ -249,7 +244,9 @@ export default function SearchScreen() {
                 >
                   <Avatar member={m} size="sm" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}>
+                    <Text
+                      style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}
+                    >
                       {m.name}
                     </Text>
                     <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
@@ -278,7 +275,9 @@ export default function SearchScreen() {
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 13, color: tokens.color.accentPrimary, fontWeight: '700' }}>
+                  <Text
+                    style={{ fontSize: 13, color: tokens.color.accentPrimary, fontWeight: '700' }}
+                  >
                     {t.label} · {t.count}
                   </Text>
                 </Pressable>
@@ -319,7 +318,9 @@ export default function SearchScreen() {
                     <Text style={{ fontSize: 22 }}>{m.coverGlyph}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}>
+                    <Text
+                      style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}
+                    >
                       {m.title}
                     </Text>
                     <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>

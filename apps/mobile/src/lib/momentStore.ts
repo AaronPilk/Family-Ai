@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { MOMENTS, ME, type FamilyMoment, type PollOption, type PackingItem, type MemberId } from './mockData';
+import {
+  MOMENTS,
+  ME,
+  type FamilyMoment,
+  type PollOption,
+  type PackingItem,
+  type MemberId,
+} from './mockData';
 
 /**
  * Local mutable copy of moments so the demo can react to taps.
@@ -47,8 +54,7 @@ export const useMomentStore = create<MomentState>((set, get) => ({
         moments: { ...s.moments, [momentId]: { ...m, [poolKey]: pool } },
       };
     }),
-  addMoment: (m) =>
-    set((s) => ({ moments: { ...s.moments, [m.id]: clone(m) } })),
+  addMoment: (m) => set((s) => ({ moments: { ...s.moments, [m.id]: clone(m) } })),
   togglePackingItem: (momentId, itemId) =>
     set((s) => {
       const m = s.moments[momentId];

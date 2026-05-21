@@ -74,8 +74,7 @@ export default function VaultScreen() {
                 style={{
                   fontSize: 14,
                   fontWeight: '600',
-                  color:
-                    tab === id ? tokens.color.textPrimary : tokens.color.textMuted,
+                  color: tab === id ? tokens.color.textPrimary : tokens.color.textMuted,
                 }}
               >
                 {id === 'mine' ? 'My vault' : 'For me'}
@@ -105,7 +104,8 @@ export default function VaultScreen() {
             Record something for later
           </Text>
           <Text style={{ fontSize: 14, color: '#D8C7CC', marginTop: 4, lineHeight: 20 }}>
-            A video for Sara's wedding day. A college fund that unlocks on graduation. Words for when you can't be there.
+            A video for Sara's wedding day. A college fund that unlocks on graduation. Words for
+            when you can't be there.
           </Text>
         </Pressable>
 
@@ -155,7 +155,8 @@ export default function VaultScreen() {
                   lineHeight: 20,
                 }}
               >
-                When someone in your family records a vault message for you and it's time, it'll appear here.
+                When someone in your family records a vault message for you and it's time, it'll
+                appear here.
               </Text>
             </View>
           )}
@@ -168,9 +169,9 @@ export default function VaultScreen() {
 function VaultCard({ item }: { item: VaultItem }) {
   const recipients = item.recipientIds.map((id) => MEMBERS[id]);
   const statusTone = {
-    sealed:    { bg: '#FFF1E0', fg: '#A56627', label: 'Sealed' },
+    sealed: { bg: '#FFF1E0', fg: '#A56627', label: 'Sealed' },
     scheduled: { bg: '#E1F1E7', fg: '#286B43', label: 'Scheduled' },
-    released:  { bg: '#FFE3EA', fg: '#9B294A', label: 'Released' },
+    released: { bg: '#FFE3EA', fg: '#9B294A', label: 'Released' },
   }[item.status] ?? { bg: '#F1E7EA', fg: '#5C545A', label: item.status };
 
   return (
@@ -237,7 +238,7 @@ function VaultCard({ item }: { item: VaultItem }) {
           ))}
         </View>
         <Text style={{ fontSize: 13, color: tokens.color.textSecondary }}>
-          For {recipients.map((r) => r.relationship === 'You' ? 'you' : r.name).join(', ')}
+          For {recipients.map((r) => (r.relationship === 'You' ? 'you' : r.name)).join(', ')}
         </Text>
         <View style={{ marginLeft: 'auto' }}>
           <View
@@ -248,7 +249,9 @@ function VaultCard({ item }: { item: VaultItem }) {
               borderRadius: 999,
             }}
           >
-            <Text style={{ color: statusTone.fg, fontSize: 12, fontWeight: '700' }}>{statusTone.label}</Text>
+            <Text style={{ color: statusTone.fg, fontSize: 12, fontWeight: '700' }}>
+              {statusTone.label}
+            </Text>
           </View>
         </View>
       </View>

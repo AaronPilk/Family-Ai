@@ -2,7 +2,14 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { MEMBERS, ME, type FamilyMoment, type PollOption, type PackingItem, type MomentMessage } from '../../lib/mockData';
+import {
+  MEMBERS,
+  ME,
+  type FamilyMoment,
+  type PollOption,
+  type PackingItem,
+  type MomentMessage,
+} from '../../lib/mockData';
 import { useMoment, useMomentStore } from '../../lib/momentStore';
 import { Avatar } from '../../components/Avatar';
 import { comingSoon } from '../../lib/comingSoon';
@@ -25,9 +32,7 @@ export default function MomentDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         {/* Hero */}
         <View
           style={{
@@ -174,7 +179,9 @@ export default function MomentDetail() {
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600', fontSize: 13 }}>
+                <Text
+                  style={{ color: tokens.color.accentPrimary, fontWeight: '600', fontSize: 13 }}
+                >
                   + Add to the list
                 </Text>
               </Pressable>
@@ -200,13 +207,20 @@ export default function MomentDetail() {
                 gap: 6,
               }}
             >
-              <Text style={{ fontSize: 14, color: tokens.color.textPrimary, lineHeight: 20, fontWeight: '600' }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: tokens.color.textPrimary,
+                  lineHeight: 20,
+                  fontWeight: '600',
+                }}
+              >
                 Everything captured during the trip will live here.
               </Text>
               <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
-                Photos, voice notes, and reactions everyone shares while in Tahoe will auto-collect into
-                this Moment's timeline. After the trip, Kin can stitch it into a chapter of the family book —
-                with the votes, packing list, and "who said what" all included.
+                Photos, voice notes, and reactions everyone shares while in Tahoe will auto-collect
+                into this Moment's timeline. After the trip, Kin can stitch it into a chapter of the
+                family book — with the votes, packing list, and "who said what" all included.
               </Text>
             </View>
           </Section>
@@ -273,7 +287,9 @@ function PollList({
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               {richCards && opt.tint && (
-                <View style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: opt.tint }} />
+                <View
+                  style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: opt.tint }}
+                />
               )}
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: tokens.color.textPrimary }}>
@@ -286,7 +302,9 @@ function PollList({
                 )}
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: tokens.color.accentPrimary }}>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '700', color: tokens.color.accentPrimary }}
+                >
                   {opt.votes.length}/{totalVoters}
                 </Text>
                 <View style={{ flexDirection: 'row', marginTop: 4 }}>
@@ -404,7 +422,9 @@ function ActivityRow({ msg }: { msg: MomentMessage }) {
         <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>
           {author.name} · {msg.whenAgo}
         </Text>
-        <Text style={{ fontSize: 15, color: tokens.color.textPrimary, marginTop: 4, lineHeight: 21 }}>
+        <Text
+          style={{ fontSize: 15, color: tokens.color.textPrimary, marginTop: 4, lineHeight: 21 }}
+        >
           {msg.body}
         </Text>
       </View>

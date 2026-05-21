@@ -75,11 +75,19 @@ export default function NewBranch() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ gap: 6 }}>
-          <Text style={{ fontSize: 26, fontWeight: '700', color: tokens.color.textPrimary, lineHeight: 32 }}>
+          <Text
+            style={{
+              fontSize: 26,
+              fontWeight: '700',
+              color: tokens.color.textPrimary,
+              lineHeight: 32,
+            }}
+          >
             A separate space for a different family.
           </Text>
           <Text style={{ fontSize: 15, color: tokens.color.textSecondary, lineHeight: 22 }}>
-            Branches are private islands. Nothing crosses over. Use one for in-laws, divorced parents, chosen family, or a tighter inner circle.
+            Branches are private islands. Nothing crosses over. Use one for in-laws, divorced
+            parents, chosen family, or a tighter inner circle.
           </Text>
         </View>
 
@@ -117,9 +125,7 @@ export default function NewBranch() {
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>
-            Create branch
-          </Text>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>Create branch</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -138,7 +144,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         paddingVertical: 12,
       }}
     >
-      <Text style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}>
+      <Text
+        style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}
+      >
         {label}
       </Text>
       {children}

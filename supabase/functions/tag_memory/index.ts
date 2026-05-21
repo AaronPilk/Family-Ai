@@ -10,9 +10,24 @@ interface Payload {
 }
 
 const TAXONOMY = [
-  'childhood','food','love','advice','faith','holidays','funny_stories','lessons',
-  'travel','music','work','parenting','school','family_traditions','milestones',
-  'photos_old','photos_new','recipes',
+  'childhood',
+  'food',
+  'love',
+  'advice',
+  'faith',
+  'holidays',
+  'funny_stories',
+  'lessons',
+  'travel',
+  'music',
+  'work',
+  'parenting',
+  'school',
+  'family_traditions',
+  'milestones',
+  'photos_old',
+  'photos_new',
+  'recipes',
 ];
 
 serve(async (req) => {
@@ -27,10 +42,9 @@ serve(async (req) => {
     // 4. For each tag above threshold (>=0.6), ensure a `topic:<slug>` timeline exists for the circle
     //    and insert a timeline_placements row with placed_by='ai_tag'
 
-    return new Response(
-      JSON.stringify({ ok: true, todo: 'implement in Batch 7' }),
-      { headers: { 'content-type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ ok: true, todo: 'implement in Batch 7' }), {
+      headers: { 'content-type': 'application/json' },
+    });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

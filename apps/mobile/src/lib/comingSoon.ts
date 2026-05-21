@@ -39,12 +39,12 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   new_branch: {
     title: 'Start another branch',
     message:
-      'Branches let you keep separate spaces for divorced parents, in-laws, chosen family, or any group that shouldn\'t share a feed. Name it, invite who belongs, and you\'ll be able to switch between branches anytime.',
+      "Branches let you keep separate spaces for divorced parents, in-laws, chosen family, or any group that shouldn't share a feed. Name it, invite who belongs, and you'll be able to switch between branches anytime.",
   },
   invite: {
     title: 'Invite someone',
     message:
-      'Pick the relationship, enter a phone or email, send. They get a soft text or email and can join when they\'re ready. The invite respects the branch you\'re in.',
+      "Pick the relationship, enter a phone or email, send. They get a soft text or email and can join when they're ready. The invite respects the branch you're in.",
   },
   new_vault: {
     title: 'Record something for later',
@@ -54,7 +54,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   photo_book: {
     title: 'Digitize a photo book',
     message:
-      'Point your phone at each page of a physical photo album. Kin extracts every individual photo, OCRs handwritten captions, asks who\'s in each photo, and adds them to the right personal/branch/topic timelines. Your binder lives forever.',
+      "Point your phone at each page of a physical photo album. Kin extracts every individual photo, OCRs handwritten captions, asks who's in each photo, and adds them to the right personal/branch/topic timelines. Your binder lives forever.",
   },
   search: {
     title: 'Search the family archive',
@@ -82,8 +82,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   },
   record_video: {
     title: 'Video recording',
-    message:
-      'Front- or back-camera, up to 3 minutes. Live preview. Auto-captioned after upload.',
+    message: 'Front- or back-camera, up to 3 minutes. Live preview. Auto-captioned after upload.',
   },
   attach_photo: {
     title: 'Attach a photo',
@@ -91,11 +90,11 @@ const COPY: Record<Feature, { title: string; message: string }> = {
       'Pick from your camera roll or take a new one. The photo becomes context for the question or memory.',
   },
   skip_prompt: {
-    title: 'Skip today\'s prompt',
+    title: "Skip today's prompt",
     message: 'A new prompt arrives tomorrow. Skipped prompts cycle back later at lower priority.',
   },
   today_prompt: {
-    title: 'Answer today\'s prompt',
+    title: "Answer today's prompt",
     message:
       'Opens a focused composer for the daily prompt. Your answer lands in your personal timeline and the relevant topic timeline immediately.',
   },
@@ -115,7 +114,8 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   },
   open_memory: {
     title: 'Memory detail',
-    message: 'Full-screen view of the memory: media, transcript, comments, where it lives in your timelines.',
+    message:
+      'Full-screen view of the memory: media, transcript, comments, where it lives in your timelines.',
   },
   open_topic: {
     title: 'Topic timeline',
@@ -125,17 +125,17 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   message_everyone: {
     title: 'Message everyone in this Moment',
     message:
-      'Opens a quick-message surface scoped to this Moment\'s participants. Different from the family feed — focused on the event.',
+      "Opens a quick-message surface scoped to this Moment's participants. Different from the family feed — focused on the event.",
   },
   add_to_packing: {
     title: 'Add to the packing list',
     message:
-      'Type an item, assign someone, set a status. Family members can check things off as they\'re packed or bought.',
+      "Type an item, assign someone, set a status. Family members can check things off as they're packed or bought.",
   },
   add_poll_option: {
     title: 'Propose an option',
     message:
-      'Add a date window or a location card to this Moment\'s poll. The family votes; the winner becomes the plan.',
+      "Add a date window or a location card to this Moment's poll. The family votes; the winner becomes the plan.",
   },
   generate_book: {
     title: 'Generate a book',
@@ -145,7 +145,7 @@ const COPY: Record<Feature, { title: string; message: string }> = {
   profile_tab_questions: {
     title: 'Questions',
     message:
-      'This tab will show questions YOU\'ve asked this person — open and answered. You\'ll be able to filter by topic and time.',
+      "This tab will show questions YOU've asked this person — open and answered. You'll be able to filter by topic and time.",
   },
   profile_tab_vault: {
     title: 'Vault for me',

@@ -15,7 +15,9 @@ major_version = 15
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+# Supabase CLI executes each file verbatim — psql backslash commands like \i are not supported.
+# Point at the real seed files directly so they run as plain SQL.
+sql_paths = ["../packages/db/seeds/prompt_templates.sql"]
 
 [realtime]
 enabled = true

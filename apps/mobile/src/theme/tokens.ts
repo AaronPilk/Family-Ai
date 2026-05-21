@@ -66,10 +66,30 @@ export const tokens = {
     pill: 999,
   },
   shadow: {
-    sm: { shadowColor: '#1A1418', shadowOpacity: 0.04, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
-    md: { shadowColor: '#1A1418', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-    lg: { shadowColor: '#1A1418', shadowOpacity: 0.08, shadowRadius: 24, shadowOffset: { width: 0, height: 8 } },
-    vault: { shadowColor: '#000000', shadowOpacity: 0.4, shadowRadius: 32, shadowOffset: { width: 0, height: 8 } },
+    sm: {
+      shadowColor: '#1A1418',
+      shadowOpacity: 0.04,
+      shadowRadius: 2,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    md: {
+      shadowColor: '#1A1418',
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    lg: {
+      shadowColor: '#1A1418',
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    vault: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.4,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 8 },
+    },
   },
   motion: {
     springTap: { damping: 18, stiffness: 220 },

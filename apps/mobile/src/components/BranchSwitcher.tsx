@@ -59,7 +59,14 @@ export function BranchList() {
 
   if (branches.length < 2) return null;
 
-  const items: { key: string; label: string; color: string; selected: boolean; onPress: () => void; subtitle: string }[] = [
+  const items: {
+    key: string;
+    label: string;
+    color: string;
+    selected: boolean;
+    onPress: () => void;
+    subtitle: string;
+  }[] = [
     {
       key: 'all',
       label: 'All my family',

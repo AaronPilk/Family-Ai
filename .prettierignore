@@ -1,0 +1,16 @@
+# Auto-generated lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+.expo/
+node_modules/
+
+# The spec is hand-formatted markdown
+docs/SPEC.md
+
+# Migrations are SQL; we keep our own style
+packages/db/migrations/

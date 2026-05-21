@@ -10,9 +10,9 @@ export function Chip({
 }) {
   const palette = {
     neutral: { bg: tokens.color.bgTinted, fg: tokens.color.textSecondary },
-    rose:    { bg: '#FFE3EA',              fg: tokens.color.accentPrimary },
-    gold:    { bg: '#FFF1E0',              fg: '#A56627' },
-    green:   { bg: '#E1F1E7',              fg: '#286B43' },
+    rose: { bg: '#FFE3EA', fg: tokens.color.accentPrimary },
+    gold: { bg: '#FFF1E0', fg: '#A56627' },
+    green: { bg: '#E1F1E7', fg: '#286B43' },
   }[tone];
 
   return (

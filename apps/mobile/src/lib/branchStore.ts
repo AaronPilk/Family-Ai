@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BRANCHES, type BranchId, type Branch } from './mockData';
+import { BRANCHES, type BranchId, type Branch, type MemberId } from './mockData';
 
 /**
  * Selection model:
@@ -34,10 +34,8 @@ export const useBranchStore = create<BranchState>((set, get) => ({
     set({ selection: ring[(i + 1) % ring.length]! });
   },
 
-  enableBlendedDemo: () =>
-    set({ visibleBranchIds: ['pilks', 'stepfamily'], selection: 'all' }),
-  disableBlendedDemo: () =>
-    set({ visibleBranchIds: ['pilks'], selection: 'pilks' }),
+  enableBlendedDemo: () => set({ visibleBranchIds: ['pilks', 'stepfamily'], selection: 'all' }),
+  disableBlendedDemo: () => set({ visibleBranchIds: ['pilks'], selection: 'pilks' }),
 }));
 
 /* ---------- hooks ---------- */
@@ -62,19 +60,67 @@ export function useScopedBranchIds(): BranchId[] {
   return sel === 'all' ? visible : [sel];
 }
 
-/** The active branch object (or a synthetic one for the "all" view) */
-export function useCurrentBranch(): Branch {
+/**
+ * View of the active scope. Discriminated union — `all` is structurally
+ * distinct from a real `Branch` so callers can't silently treat the synthetic
+ * "All my family" scope as a writable branch (Codex H-M2).
+ *
+ * Use `useCurrentBranch()` for display (label/color/count).
+ * Use `useWritableBranchId()` if you need a real branch id to write into;
+ * it returns null when the user is in "all" mode and the caller MUST pick.
+ */
+export type CurrentBranchView =
+  | {
+      kind: 'single';
+      branchId: BranchId;
+      shortName: string;
+      name: string;
+      color: string;
+      memberIds: MemberId[];
+      memoryCount: number;
+    }
+  | {
+      kind: 'all';
+      branchIds: BranchId[];
+      shortName: 'All my family';
+      name: 'All my family';
+      color: string;
+      memberIds: MemberId[];
+      memoryCount: number;
+    };
+
+export function useCurrentBranch(): CurrentBranchView {
   const sel = useBranchStore((s) => s.selection);
   const visible = useBranchStore((s) => s.visibleBranchIds);
   if (sel === 'all') {
     return {
-      id: 'pilks', // unused
-      name: 'All my family',
+      kind: 'all',
+      branchIds: visible,
       shortName: 'All my family',
+      name: 'All my family',
+      color: '#7A4A8C',
       memberIds: Array.from(new Set(visible.flatMap((id) => BRANCHES[id].memberIds))),
-      color: '#7A4A8C', // muted purple for "all"
       memoryCount: visible.reduce((sum, id) => sum + BRANCHES[id].memoryCount, 0),
     };
   }
-  return BRANCHES[sel];
+  const b = BRANCHES[sel];
+  return {
+    kind: 'single',
+    branchId: sel,
+    shortName: b.shortName,
+    name: b.name,
+    color: b.color,
+    memberIds: b.memberIds,
+    memoryCount: b.memoryCount,
+  };
+}
+
+/**
+ * Returns the BranchId you can write into; null when the user is in the
+ * synthetic "all" scope. Forms that create rows must check this and force a
+ * picker before submit.
+ */
+export function useWritableBranchId(): BranchId | null {
+  const view = useCurrentBranch();
+  return view.kind === 'single' ? view.branchId : null;
 }

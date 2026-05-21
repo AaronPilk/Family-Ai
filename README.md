@@ -2,7 +2,7 @@
 
 > A private family memory network. Ask anything. Save every answer.
 
-Kin captures the small questions you think to ask your family — *"what did you eat with Chicken in a Biskit crackers?"*, *"what music were you listening to at my age?"* — and turns the answers into a permanent, organized, two-sided story for every relationship in your family.
+Kin captures the small questions you think to ask your family — _"what did you eat with Chicken in a Biskit crackers?"_, _"what music were you listening to at my age?"_ — and turns the answers into a permanent, organized, two-sided story for every relationship in your family.
 
 The full product spec lives in [`docs/SPEC.md`](docs/SPEC.md). It is the source of truth. Read it before changing schema, visibility, or core flows.
 
@@ -47,6 +47,7 @@ Stack rationale is in [`docs/SPEC.md` §G](docs/SPEC.md).
 ## Getting started
 
 ### Prerequisites
+
 - Node 20.11+ (use `.nvmrc`)
 - pnpm 9+
 - Xcode 15+ (for iOS) / Android Studio (for Android)
@@ -75,15 +76,15 @@ pnpm ios       # or `pnpm android` / `pnpm dev` for Expo Dev tools
 
 ### Common scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Expo dev server |
-| `pnpm ios` / `pnpm android` | Run on simulator |
-| `pnpm typecheck` | TS check across the monorepo |
-| `pnpm format` | Prettier on everything |
-| `pnpm db:reset` | Reset local DB + reapply all migrations + seed |
-| `pnpm db:diff` | Diff local schema vs migrations (catches drift) |
-| `pnpm db:types` | Regenerate Supabase types into `packages/shared` |
+| Command                     | What it does                                     |
+| --------------------------- | ------------------------------------------------ |
+| `pnpm dev`                  | Expo dev server                                  |
+| `pnpm ios` / `pnpm android` | Run on simulator                                 |
+| `pnpm typecheck`            | TS check across the monorepo                     |
+| `pnpm format`               | Prettier on everything                           |
+| `pnpm db:reset`             | Reset local DB + reapply all migrations + seed   |
+| `pnpm db:diff`              | Diff local schema vs migrations (catches drift)  |
+| `pnpm db:types`             | Regenerate Supabase types into `packages/shared` |
 
 ## How a single answer fans out
 

@@ -101,9 +101,7 @@ export default function InviteFirst() {
                     borderRadius: 999,
                     backgroundColor: active ? tokens.color.accentPrimary : tokens.color.bgPrimary,
                     borderWidth: 1,
-                    borderColor: active
-                      ? tokens.color.accentPrimary
-                      : tokens.color.borderSubtle,
+                    borderColor: active ? tokens.color.accentPrimary : tokens.color.borderSubtle,
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >

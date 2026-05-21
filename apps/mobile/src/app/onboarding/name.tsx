@@ -82,15 +82,12 @@ export default function NameFamily() {
               lineHeight: 18,
             }}
           >
-            Most families use one group. If yours is more complex (divorced parents, in-laws,
-            chosen family), you can add more groups later from Settings.
+            Most families use one group. If yours is more complex (divorced parents, in-laws, chosen
+            family), you can add more groups later from Settings.
           </Text>
         </View>
 
-        <PrimaryNext
-          label="Continue"
-          onPress={() => router.push('/onboarding/invite')}
-        />
+        <PrimaryNext label="Continue" onPress={() => router.push('/onboarding/invite')} />
       </View>
     </KeyboardAvoidingView>
   );
@@ -118,8 +115,7 @@ export function OnboardingHeader({ step, total }: { step: number; total: number 
               flex: 1,
               height: 3,
               borderRadius: 2,
-              backgroundColor:
-                i < step ? tokens.color.accentPrimary : tokens.color.borderSubtle,
+              backgroundColor: i < step ? tokens.color.accentPrimary : tokens.color.borderSubtle,
             }}
           />
         ))}

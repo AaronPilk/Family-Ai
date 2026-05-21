@@ -58,7 +58,11 @@ export default function HomeScreen() {
                 Today
               </Text>
               <Text style={{ fontSize: 14, color: tokens.color.textMuted, marginTop: 2 }}>
-                Wednesday, May 20
+                {new Date().toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -153,7 +157,9 @@ export default function HomeScreen() {
 
         {/* INBOX */}
         {inbox.length > 0 && (
-          <Section title={`People asked you ${inbox.length} ${inbox.length === 1 ? 'question' : 'questions'}`}>
+          <Section
+            title={`People asked you ${inbox.length} ${inbox.length === 1 ? 'question' : 'questions'}`}
+          >
             <View style={{ gap: 10 }}>
               {inbox.map((q) => {
                 const from = MEMBERS[q.fromId];
@@ -247,8 +253,8 @@ export default function HomeScreen() {
                 lineHeight: 20,
               }}
             >
-              Point your phone at each page. Kin extracts every photo, dates them, and
-              asks who's in them — so your binder lives forever.
+              Point your phone at each page. Kin extracts every photo, dates them, and asks who's in
+              them — so your binder lives forever.
             </Text>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 14 }}>
               {PHOTO_BOOKS.map((b) => (
@@ -420,10 +426,10 @@ function PromptAction({
 
 function MomentCard({ moment }: { moment: FamilyMoment }) {
   const statusLabel = {
-    planning:  { label: 'PLANNING',   color: tokens.color.accentPrimary },
-    upcoming:  { label: 'UPCOMING',   color: '#286B43' },
-    happening: { label: 'HAPPENING',  color: '#B9701D' },
-    past:      { label: 'PAST',       color: tokens.color.textMuted },
+    planning: { label: 'PLANNING', color: tokens.color.accentPrimary },
+    upcoming: { label: 'UPCOMING', color: '#286B43' },
+    happening: { label: 'HAPPENING', color: '#B9701D' },
+    past: { label: 'PAST', color: tokens.color.textMuted },
   }[moment.status];
 
   const participantAvatars = moment.participantIds.slice(0, 4).map((id) => MEMBERS[id]);
@@ -454,15 +460,15 @@ function MomentCard({ moment }: { moment: FamilyMoment }) {
       </View>
       {/* Body */}
       <View style={{ padding: 14, gap: 8 }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: statusLabel.color, letterSpacing: 1 }}>
+        <Text
+          style={{ fontSize: 11, fontWeight: '700', color: statusLabel.color, letterSpacing: 1 }}
+        >
           {statusLabel.label}
         </Text>
         <Text style={{ fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}>
           {moment.title}
         </Text>
-        <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>
-          {moment.dateRangeText}
-        </Text>
+        <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>{moment.dateRangeText}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
           <View style={{ flexDirection: 'row' }}>
             {participantAvatars.map((m, i) => (

@@ -3,13 +3,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import {
-  MEMBERS,
-  MEMORIES_WITH,
-  FEED,
-  type MemberId,
-  type FeedItem,
-} from '../../lib/mockData';
+import { MEMBERS, MEMORIES_WITH, FEED, type MemberId, type FeedItem } from '../../lib/mockData';
 import { Avatar } from '../../components/Avatar';
 import { comingSoon } from '../../lib/comingSoon';
 
@@ -123,7 +117,9 @@ export default function MemberProfile() {
           </View>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
             <Pressable
-              onPress={() => router.push({ pathname: '/(tabs)/ask', params: { preselect: memberId } })}
+              onPress={() =>
+                router.push({ pathname: '/(tabs)/ask', params: { preselect: memberId } })
+              }
               style={({ pressed }) => ({
                 paddingHorizontal: 20,
                 paddingVertical: 12,
@@ -132,9 +128,7 @@ export default function MemberProfile() {
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ color: 'white', fontWeight: '700' }}>
-                Ask {member.name} something
-              </Text>
+              <Text style={{ color: 'white', fontWeight: '700' }}>Ask {member.name} something</Text>
             </Pressable>
             <Pressable
               onPress={() => comingSoon('view_vault_for_me')}
@@ -163,12 +157,12 @@ export default function MemberProfile() {
             borderBottomColor: tokens.color.borderSubtle,
           }}
         >
-          {([
+          {[
             { id: 'timeline' as const, label: 'Timeline' },
             { id: 'questions' as const, label: 'Questions' },
             { id: 'vault' as const, label: 'Vault for me' },
             { id: 'about' as const, label: 'About' },
-          ]).map((t) => {
+          ].map((t) => {
             const active = tab === t.id;
             return (
               <Pressable
@@ -211,17 +205,28 @@ export default function MemberProfile() {
             gap: 8,
           }}
         >
-          <Text style={{ fontSize: 12, color: tokens.color.accentPrimary, fontWeight: '700', letterSpacing: 1 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              color: tokens.color.accentPrimary,
+              fontWeight: '700',
+              letterSpacing: 1,
+            }}
+          >
             STORY SO FAR · WRITTEN BY KIN
           </Text>
           <Text style={{ fontSize: 15, color: tokens.color.textPrimary, lineHeight: 22 }}>
             You've asked {member.name} {Math.max(memCount - 12, 8)} questions this year. Most have
-            been about food, childhood, and what it was like raising you. Their voice notes
-            average 47 seconds and there are 4 photos you've never seen before.
+            been about food, childhood, and what it was like raising you. Their voice notes average
+            47 seconds and there are 4 photos you've never seen before.
           </Text>
           <Pressable
             onPress={() => comingSoon('generate_book')}
-            style={({ pressed }) => ({ alignSelf: 'flex-start', marginTop: 4, opacity: pressed ? 0.5 : 1 })}
+            style={({ pressed }) => ({
+              alignSelf: 'flex-start',
+              marginTop: 4,
+              opacity: pressed ? 0.5 : 1,
+            })}
           >
             <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700', fontSize: 13 }}>
               Generate a book of {member.name}'s answers →
@@ -235,7 +240,10 @@ export default function MemberProfile() {
           <MemoryCard key={m.id} item={m} memberName={member.name} />
         ))}
 
-        <SectionHeader title="April 2026" subtitle={`${member.relationship} on family traditions`} />
+        <SectionHeader
+          title="April 2026"
+          subtitle={`${member.relationship} on family traditions`}
+        />
         {sampleFor(memberId).map((m) => (
           <MemoryCard key={`p2-${m.id}`} item={m} memberName={member.name} />
         ))}
@@ -256,9 +264,7 @@ function Stat({ number, label }: { number: number; label: string }) {
       >
         {number}
       </Text>
-      <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
-        {label}
-      </Text>
+      <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>{label}</Text>
     </View>
   );
 }
@@ -269,7 +275,9 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
       <Text style={{ fontSize: 18, fontWeight: '700', color: tokens.color.textPrimary }}>
         {title}
       </Text>
-      <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2, fontStyle: 'italic' }}>
+      <Text
+        style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2, fontStyle: 'italic' }}
+      >
         {subtitle}
       </Text>
     </View>
@@ -281,7 +289,7 @@ function MemoryCard({ item, memberName }: { item: FeedItem; memberName: string }
   const isSynthetic = item.id.startsWith('sample-');
   return (
     <Pressable
-      onPress={() => isSynthetic ? comingSoon('open_memory') : router.push(`/memory/${item.id}`)}
+      onPress={() => (isSynthetic ? comingSoon('open_memory') : router.push(`/memory/${item.id}`))}
       style={({ pressed }) => ({
         backgroundColor: tokens.color.bgPrimary,
         borderRadius: 16,
@@ -331,7 +339,8 @@ function MemoryCard({ item, memberName }: { item: FeedItem; memberName: string }
             <Text style={{ color: 'white', fontSize: 14 }}>▶</Text>
           </View>
           <Text style={{ fontSize: 13, color: tokens.color.textSecondary }}>
-            {item.mediaKind === 'video' ? 'Video' : 'Voice'} · {Math.floor((item.durationSec ?? 60) / 60)}:
+            {item.mediaKind === 'video' ? 'Video' : 'Voice'} ·{' '}
+            {Math.floor((item.durationSec ?? 60) / 60)}:
             {String((item.durationSec ?? 60) % 60).padStart(2, '0')}
           </Text>
         </View>

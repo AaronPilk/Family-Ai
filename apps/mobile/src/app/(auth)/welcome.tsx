@@ -90,9 +90,7 @@ export default function Welcome() {
           shadowOffset: { width: 0, height: 6 },
         })}
       >
-        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 17 }}>
-          Get started
-        </Text>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 17 }}>Get started</Text>
       </Pressable>
     </View>
   );

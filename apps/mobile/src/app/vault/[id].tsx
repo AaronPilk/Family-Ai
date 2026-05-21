@@ -8,10 +8,10 @@ import { Avatar } from '../../components/Avatar';
 import { comingSoon } from '../../lib/comingSoon';
 
 const STATUS_TONE = {
-  sealed:    { bg: '#FFF1E0', fg: '#A56627', label: 'Sealed' },
+  sealed: { bg: '#FFF1E0', fg: '#A56627', label: 'Sealed' },
   scheduled: { bg: '#E1F1E7', fg: '#286B43', label: 'Scheduled' },
-  released:  { bg: '#FFE3EA', fg: '#9B294A', label: 'Released' },
-  revoked:   { bg: '#F1E7EA', fg: '#5C545A', label: 'Revoked' },
+  released: { bg: '#FFE3EA', fg: '#9B294A', label: 'Released' },
+  revoked: { bg: '#F1E7EA', fg: '#5C545A', label: 'Revoked' },
   awaiting_verification: { bg: '#FFF1E0', fg: '#A56627', label: 'Awaiting verification' },
 } as const;
 
@@ -35,7 +35,7 @@ export default function VaultDetail() {
   function confirmRevoke() {
     Alert.alert(
       'Revoke this vault item?',
-      'It won\'t be released and the recipients will never see it. You can\'t undo this.',
+      "It won't be released and the recipients will never see it. You can't undo this.",
       [
         { text: 'Keep it', style: 'cancel' },
         {
@@ -52,9 +52,7 @@ export default function VaultDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <View
           style={{
             paddingTop: insets.top + 8,
@@ -83,7 +81,9 @@ export default function VaultDetail() {
           >
             <Text style={{ fontSize: 20, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}>
+          <Text
+            style={{ flex: 1, fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}
+          >
             Vault item
           </Text>
         </View>
@@ -161,8 +161,7 @@ export default function VaultDetail() {
             </View>
             {item.durationSec && (
               <Text style={{ fontSize: 12, color: '#D8C7CC' }}>
-                {Math.floor(item.durationSec / 60)}:
-                {String(item.durationSec % 60).padStart(2, '0')}
+                {Math.floor(item.durationSec / 60)}:{String(item.durationSec % 60).padStart(2, '0')}
               </Text>
             )}
           </View>
@@ -215,7 +214,9 @@ export default function VaultDetail() {
             }}
           >
             <Pressable
-              onPress={() => comingSoon(item.mediaKind === 'voice' ? 'record_voice' : 'record_video')}
+              onPress={() =>
+                comingSoon(item.mediaKind === 'voice' ? 'record_voice' : 'record_video')
+              }
               hitSlop={8}
               style={({ pressed }) => ({
                 width: 52,

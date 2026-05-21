@@ -16,12 +16,53 @@ interface Notif {
 }
 
 const NOTIFS: Notif[] = [
-  { id: 'n1', kind: 'question_received', fromId: 'mom',   body: 'Linda asked you a memory question.', whenAgo: '1h ago',  unread: true, goTo: '/answer/q1' },
-  { id: 'n2', kind: 'answer_received',   fromId: 'grace', body: 'Grandma answered your question about holding you.', whenAgo: '3h ago', unread: true, goTo: '/memory/3' },
-  { id: 'n3', kind: 'vault_releasing',                   body: 'A vault item is ready to release: "For Mike on his 50th" (in 12 years).', whenAgo: 'yesterday' },
-  { id: 'n4', kind: 'moment_update',     fromId: 'mom',   body: 'Mom voted on Tahoe family week dates.', whenAgo: 'yesterday', goTo: '/moment/tahoe' },
-  { id: 'n5', kind: 'answer_received',   fromId: 'dad',   body: 'Tom answered your question about music.', whenAgo: '1w ago', goTo: '/memory/5' },
-  { id: 'n6', kind: 'digest',                            body: 'Your family added 4 memories this week. Take a look.', whenAgo: '1w ago', goTo: '/feed' },
+  {
+    id: 'n1',
+    kind: 'question_received',
+    fromId: 'mom',
+    body: 'Linda asked you a memory question.',
+    whenAgo: '1h ago',
+    unread: true,
+    goTo: '/answer/q1',
+  },
+  {
+    id: 'n2',
+    kind: 'answer_received',
+    fromId: 'grace',
+    body: 'Grandma answered your question about holding you.',
+    whenAgo: '3h ago',
+    unread: true,
+    goTo: '/memory/3',
+  },
+  {
+    id: 'n3',
+    kind: 'vault_releasing',
+    body: 'A vault item is ready to release: "For Mike on his 50th" (in 12 years).',
+    whenAgo: 'yesterday',
+  },
+  {
+    id: 'n4',
+    kind: 'moment_update',
+    fromId: 'mom',
+    body: 'Mom voted on Tahoe family week dates.',
+    whenAgo: 'yesterday',
+    goTo: '/moment/tahoe',
+  },
+  {
+    id: 'n5',
+    kind: 'answer_received',
+    fromId: 'dad',
+    body: 'Tom answered your question about music.',
+    whenAgo: '1w ago',
+    goTo: '/memory/5',
+  },
+  {
+    id: 'n6',
+    kind: 'digest',
+    body: 'Your family added 4 memories this week. Take a look.',
+    whenAgo: '1w ago',
+    goTo: '/feed',
+  },
 ];
 
 const ICON: Record<Notif['kind'], string> = {
@@ -94,7 +135,9 @@ export default function Notifications() {
                 backgroundColor: n.unread ? tokens.color.bgTinted : tokens.color.bgPrimary,
                 borderRadius: 14,
                 borderWidth: 1,
-                borderColor: n.unread ? tokens.color.accentPrimary + '40' : tokens.color.borderSubtle,
+                borderColor: n.unread
+                  ? tokens.color.accentPrimary + '40'
+                  : tokens.color.borderSubtle,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 12,

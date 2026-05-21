@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ScrollView, View, Text, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  ScrollView,
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { INBOX, MEMBERS } from '../../lib/mockData';
@@ -39,7 +47,9 @@ export default function AnswerQuestion() {
         }}
       >
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12 }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12 }}
+        >
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => ({
@@ -76,7 +86,14 @@ export default function AnswerQuestion() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Avatar member={from} size="md" />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, color: tokens.color.accentPrimary, fontWeight: '700', letterSpacing: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: tokens.color.accentPrimary,
+                    fontWeight: '700',
+                    letterSpacing: 1,
+                  }}
+                >
                   {from.relationship.toUpperCase()} ASKED
                 </Text>
                 <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2 }}>
@@ -84,7 +101,14 @@ export default function AnswerQuestion() {
                 </Text>
               </View>
             </View>
-            <Text style={{ fontSize: 19, lineHeight: 28, color: tokens.color.textPrimary, fontWeight: '500' }}>
+            <Text
+              style={{
+                fontSize: 19,
+                lineHeight: 28,
+                color: tokens.color.textPrimary,
+                fontWeight: '500',
+              }}
+            >
               {question.body}
             </Text>
           </View>
@@ -258,9 +282,7 @@ export default function AnswerQuestion() {
             disabled={!hasRecording && !text.trim()}
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => ({
-              backgroundColor: hasRecording || text.trim()
-                ? tokens.color.accentPrimary
-                : '#D8C7CC',
+              backgroundColor: hasRecording || text.trim() ? tokens.color.accentPrimary : '#D8C7CC',
               height: 56,
               borderRadius: 999,
               alignItems: 'center',

@@ -39,7 +39,7 @@ Existing tools each solve part of this and miss the rest:
 
 - **Instagram/TikTok**: built for performance, not preservation; public-by-default; algorithmic; not safe for family.
 - **iMessage/WhatsApp**: ephemeral by design, messages get buried, no structure, no archive, no shared timeline.
-- **Storyworth/Remento**: lovely but unidirectional — one elder, one prompt a week, one book per year. They don't capture the *random* in-the-moment questions that are the most valuable.
+- **Storyworth/Remento**: lovely but unidirectional — one elder, one prompt a week, one book per year. They don't capture the _random_ in-the-moment questions that are the most valuable.
 - **Shared photo albums (Google Photos, Apple Shared Library)**: just images; no questions, no relationships, no story.
 - **Ancestry/MyHeritage**: backward-looking genealogy; not designed for living conversation.
 
@@ -60,7 +60,7 @@ A **Vault** lets a person record messages that release in the future — on a da
 - Phones can record studio-quality voice and 4K video natively.
 - Whisper-class transcription is cheap and accurate.
 - LLMs can organize unstructured life-story content into coherent timelines and books for the first time.
-- An aging-parent generation is rapidly adopting iPhone, FaceTime, and iMessage. They will use a *familiar* interface (Instagram-like) but won't use one that feels public or technical.
+- An aging-parent generation is rapidly adopting iPhone, FaceTime, and iMessage. They will use a _familiar_ interface (Instagram-like) but won't use one that feels public or technical.
 - Younger generations regret not asking questions and want a structured way to do it.
 
 ### The unique wedge
@@ -70,7 +70,7 @@ Every competitor either captures the elder's story in long-form (Storyworth, Rem
 ### What Kin is NOT
 
 - Not a social network. There is no follower count, no public posts, no algorithm trying to maximize engagement.
-- Not a chat app. Messages are not the unit; *memories* are.
+- Not a chat app. Messages are not the unit; _memories_ are.
 - Not a genealogy tool. We don't care about your great-great-grandparents (yet).
 - Not a cloud storage product. We are not "Dropbox for family." Storage is the floor, not the ceiling.
 
@@ -83,13 +83,15 @@ The MVP must prove a single hypothesis: **families will adopt on-demand question
 ### MVP scope — IN
 
 Authentication & onboarding (3 steps after sign-in)
+
 - Email + Apple Sign-In + phone (SMS) auth
-- **Step 1 — Name your family.** Text input. Default to *just one* family/branch. Copy: "Most families use one group. If yours is more complex (divorced parents, in-laws, chosen family), you can add more from Settings."
+- **Step 1 — Name your family.** Text input. Default to _just one_ family/branch. Copy: "Most families use one group. If yours is more complex (divorced parents, in-laws, chosen family), you can add more from Settings."
 - **Step 2 — Invite the first person.** Name + phone/email + relationship picker (parent, child, sibling, grandparent, stepparent, stepsibling, partner, aunt/uncle, cousin, custom). Skippable.
 - **Step 3 — How Kin works.** One screen that explains the fan-out: when Mom answers a question, her words live in **three** places — her own life story, the relationship between you and her, and the relevant topic timeline. This is the most important UX moment in the entire app; it removes the "I don't get how this is organized" feeling on first run.
 - Profile setup happens inline (the user IS their own first profile via the chosen display name + auth).
 
 Branch model (one by default; more when needed)
+
 - The default state is **one branch** — your family. The "circle/branch" abstraction is invisible to single-family users; they just see "your family."
 - A second branch appears when the user explicitly creates one OR accepts an invite from a different family. From there the branch switcher appears at the top of Home, Ask, and Family screens. It hides itself when only one branch exists.
 - Use cases for multi-branch: divorced parents (Mom's side + Dad's side), blended families (bio family + step family), in-laws (your family + partner's family), chosen family (separate from biological).
@@ -99,53 +101,62 @@ Branch model (one by default; more when needed)
 - Schema-wise: each branch is a `family_circles` row; a user has one `family_memberships` row per branch.
 
 The Ask flow (the core)
+
 - Floating Ask button on every primary screen
 - Choose recipient(s) — single or multi
 - Compose: text, voice (record-in-place), or attach a photo/short video as context
 - Visibility selector (default: just you + recipient)
-- Send; recipient gets a push: *"Aaron asked you a memory question."*
+- Send; recipient gets a push: _"Aaron asked you a memory question."_
 
 The Answer flow
+
 - Inbox of pending questions
 - Tap to answer with text, voice, or video (in-app recording, up to 3 minutes for MVP)
 - "Save draft" + "Answer later" reminders
 - Visibility inherits from the question; recipient can broaden or narrow
 
 Storage of answers across three places
+
 - Responder's **personal timeline**
 - The asker↔responder **relationship timeline**
 - The **family feed** if visibility allows
 
 Private family feed
+
 - Vertical scroll, Instagram-style
 - Post types: photo, video, text memory, throwback, milestone, question, poll (Phase 2)
 - Each post carries a visibility rule
 - Comments (text, voice note, emoji reaction) become part of the timeline
 
 Basic Vault
+
 - Record a video/audio/text and pin a release rule: **release now**, **release on date**, **release on someone's birthday**, **release at age N**, **release manually**. Death-triggered release is Phase 2 (requires a verification process).
 - Vault items show up in the timeline once released.
 
 Basic timelines
+
 - Personal timeline (one per profile)
 - Relationship timeline (one per directional pair)
 - Family timeline (the circle as a whole)
 - Topic timelines for MVP: **Childhood, Food, Love, Advice, Faith, Holidays, Funny stories, Lessons** (auto-tagged by AI; user can re-tag)
 
 AI v1 (helpful, not intrusive)
+
 - Transcription for all voice/video (Whisper-class)
 - Auto-tagging into topic timelines (Claude-class summarizer + classifier)
 - Search across the family archive (Postgres full-text + pgvector semantic)
 - "Suggested follow-up questions" after an answer is given
 
 Notifications
+
 - New question for you
 - Someone answered your question
 - Someone posted in the feed
 - Vault item is about to release
-- Weekly digest: *"This week in your family — 4 new memories"*
+- Weekly digest: _"This week in your family — 4 new memories"_
 
 Settings
+
 - Manage circle members
 - Edit relationships
 - Visibility defaults
@@ -181,9 +192,9 @@ Five personas. Three are critical for the MVP (Aaron, Linda, Grace). Two appear 
 ### 1. Aaron — "The Initiator" (35, founder, has two young kids)
 
 - Owns an iPhone, comfortable with any app.
-- Has the *impulse* to ask his mom things, often when triggered by a small daily moment.
+- Has the _impulse_ to ask his mom things, often when triggered by a small daily moment.
 - Is the one who installs the app, invites his parents, and drives early adoption.
-- Pain points: keeps thinking of questions and forgetting them; doesn't want to interrupt his mom with a long call; wants the answers preserved for *his own* kids.
+- Pain points: keeps thinking of questions and forgetting them; doesn't want to interrupt his mom with a long call; wants the answers preserved for _his own_ kids.
 - Wants: speed (ask in under 15 seconds), guarantee that nothing is lost, beautiful surface to look back on.
 - Will pay: yes, $10–20/month, but only if his family actually uses it.
 - Risk of churn: if mom and dad don't engage in the first 2 weeks, he stops asking.
@@ -191,7 +202,7 @@ Five personas. Three are critical for the MVP (Aaron, Linda, Grace). Two appear 
 ### 2. Linda — "The Keeper" (62, Aaron's mom, retired teacher)
 
 - Has an iPhone but uses ~6 apps. Facebook, Messages, FaceTime, Photos, weather, banking.
-- Loves the *idea* of leaving stories for her kids and grandkids but feels paralyzed by Storyworth's weekly prompts ("I don't know what to write").
+- Loves the _idea_ of leaving stories for her kids and grandkids but feels paralyzed by Storyworth's weekly prompts ("I don't know what to write").
 - Way more comfortable talking than typing.
 - Pain points: doesn't want to feel "old"; doesn't want to do anything that feels like homework; doesn't want a confusing interface; doesn't want to broadcast.
 - Wants: a question from someone she loves with a clear "tap here to record" button, no pressure, easy to skip.
@@ -201,7 +212,7 @@ Five personas. Three are critical for the MVP (Aaron, Linda, Grace). Two appear 
 
 - Owns an iPhone her son set up. Uses FaceTime and Photos.
 - Will not download an app on her own.
-- Onboarding must be done *by Aaron during a visit*, with her account effectively co-piloted.
+- Onboarding must be done _by Aaron during a visit_, with her account effectively co-piloted.
 - Her contributions are the most valuable in the family archive — her stories are running out of time.
 - Pain points: small text is hard to read; gets confused by modals; recordings need to be effortless.
 - Wants: a single screen that shows: "Aaron asked you a question. Tap to listen. Tap to reply."
@@ -211,7 +222,7 @@ Five personas. Three are critical for the MVP (Aaron, Linda, Grace). Two appear 
 
 - Will install the app because Aaron invited him.
 - Won't open it weekly. Will open it when notified.
-- Mostly a *reader* and *liker*, not a poster.
+- Mostly a _reader_ and _liker_, not a poster.
 - Pain points: feels guilt about not engaging more; doesn't want notification spam.
 - Wants: low-effort presence, occasional batched "highlights from your family this month" email, easy to react.
 - Risk: notification fatigue and he mutes the app, then forgets it exists.
@@ -219,9 +230,9 @@ Five personas. Three are critical for the MVP (Aaron, Linda, Grace). Two appear 
 ### 5. Sara — "The Future Child" (currently age 4, eventually 18+)
 
 - Not a current user.
-- Is the *reason* the product exists.
+- Is the _reason_ the product exists.
 - Will inherit the archive: Aaron's vault messages to her, Linda's videos, Grace's stories.
-- The product must hold up over 15+ years: data must remain readable, accounts must be transferable, accessibility must improve as she grows up *and* as the elders pass on.
+- The product must hold up over 15+ years: data must remain readable, accounts must be transferable, accessibility must improve as she grows up _and_ as the elders pass on.
 
 ### Persona-driven design principles
 
@@ -245,10 +256,11 @@ The flows below are written as numbered steps with screen names, primary actions
 4. **Create or join** → Aaron picks "Start a new family." Enters family name ("The Pilks").
 5. **Invite first members** → Aaron taps + Add and enters Linda's phone or email + picks her relationship to him ("parent"). Repeat for Dad, Mike, Grace. Each invite creates a pending row. (Touches: `family_circles`, `family_memberships`, `relationships`, `invites`.)
 6. **Send invites** → each pending member gets an SMS or email with a deep link. The link opens the app (or App Store) and auto-binds the invite to their account on signup.
-7. **Default visibility chooser** → "Who should see new things you post by default?" Options: Everyone, Just me + recipient, Specific people. Default: *Just me + recipient*. (Touches: `profiles.default_visibility_rule_id`, `visibility_rules`.)
+7. **Default visibility chooser** → "Who should see new things you post by default?" Options: Everyone, Just me + recipient, Specific people. Default: _Just me + recipient_. (Touches: `profiles.default_visibility_rule_id`, `visibility_rules`.)
 8. **Suggested first question** → "Want to ask your mom something to get started?" with 3 example prompts. Skips to Flow 2.
 
 **Edge cases**
+
 - Linda doesn't have the app → SMS link includes a fallback web page explaining what Kin is and a "Download" button. Invite stays pending up to 30 days.
 - Two family members invite the same person → second invite is consolidated into the same pending invite, not a duplicate.
 
@@ -259,17 +271,18 @@ The flows below are written as numbered steps with screen names, primary actions
 3. **Compose screen** with three input modes (Text / Voice / Camera) and an optional "Add context" affordance (camera roll, link, screenshot).
    - Aaron types: "Mom — what did you eat Chicken in a Biskit crackers with when you were a kid?"
    - Adds a photo of the cracker box he saw at the store.
-4. **Visibility selector** (collapsed by default, shows current value as a chip: *Just you and Mom*). Aaron leaves as-is.
+4. **Visibility selector** (collapsed by default, shows current value as a chip: _Just you and Mom_). Aaron leaves as-is.
 5. **Send** → optimistic UI shows the question moving to the relationship timeline; push fires to Linda.
 6. (Touches on send: `memory_items` (kind=`question`), `memory_media`, `question_recipients`, `timeline_placements` (×2: Aaron's personal, Aaron↔Linda relationship), `notifications`.)
 
 **Edge cases**
+
 - Network failure on send → queue locally, retry; user sees a small "Sending…" chip, never a destructive error.
 - Recipient is not in the circle yet (Aaron tries to ask a not-yet-joined invitee) → question is held in "pending recipient" state and delivered the moment they join.
 
 ### Flow 3 — Answering a question (Linda gets the push)
 
-1. **Push notification**: *"Aaron asked you a memory question. 🥨"*
+1. **Push notification**: _"Aaron asked you a memory question. 🥨"_
 2. Tap → **Question detail screen**: Aaron's question + photo context displayed large; one big primary button: **Answer**.
 3. **Answer mode chooser** → three big rounded cards: **Voice** (default, most prominent), **Video**, **Type it**. Linda taps Voice.
 4. **Recording screen** → giant pink mic button, waveform, timer. Tap to start, tap to stop. After stop: **Send** / **Re-record** / **Add a note**.
@@ -280,6 +293,7 @@ The flows below are written as numbered steps with screen names, primary actions
    - Suggested follow-up question stored as a `prompt_suggestion` row for Aaron
 
 **Edge cases**
+
 - Linda hits Cancel mid-recording → draft is saved; question stays in inbox with "Draft saved" badge.
 - Linda is offline → recording finishes locally, queues for upload, retries on next network availability. Push to Aaron deferred until upload confirmed.
 - Linda wants to answer later → "Remind me" sets a notification for tomorrow morning; question stays pinned in inbox.
@@ -289,7 +303,7 @@ The flows below are written as numbered steps with screen names, primary actions
 1. From Home, tap **+** in top right → **New post**.
 2. Choose media (camera roll, in-app camera, or text-only).
 3. Add caption.
-4. Visibility chip: *Everyone in family* (default for feed posts).
+4. Visibility chip: _Everyone in family_ (default for feed posts).
 5. Tap **Post**. (Touches: `memory_items` (kind=`post`), `memory_media`, `timeline_placements` (Family feed + Aaron's personal).)
 6. Family members see in feed; can react / comment. Comments become `memory_items` with `parent_memory_id` and their own timeline_placements.
 
@@ -365,7 +379,7 @@ The app uses a 5-tab bottom bar plus a global floating **Ask** button. Screen na
 - Two segments: **My Vault** (items I created) and **For Me** (items released to me).
 - Empty state: explainer card "Leave a message for the future" with one-tap to record.
 - Each vault item shows: title (or auto-generated), recipients, release rule in plain English ("Releases on Sara's 18th birthday — Mar 14, 2040"), media preview, status pill.
-- + button creates new vault item (Flow 6).
+- - button creates new vault item (Flow 6).
 
 ### 4. Timeline
 
@@ -427,9 +441,9 @@ Everything else: Auth & onboarding · Branch create/join · Invites (SMS, email,
 - Family tree visualization (read-only)
 - **Photo book digitization** — point the phone at each page of a physical album; OCR + image segmentation extracts every photo, AI groups them by era and event, user assigns people. Each extracted photo flows into the relevant personal/branch/topic timelines. This is a moat: nobody does this well, and analog family albums are decaying right now.
 - More advanced vault releases: milestone triggers (first child, marriage, anniversary)
-- **Money-release vault items** — Stripe-backed scheduled transfers tied to a release rule ("$25K to Sara on college graduation"). Funds held in escrow; recipient claims on release. Requires payment integration, KYC, and partnerships with a custodial / trust-account provider. Real legal lift, real differentiation.
+- **Money-release vault items** — Stripe-backed scheduled transfers tied to a release rule ("$25K to Sara on college graduation"). Funds held in escrow; recipient claims on release. Requires payment integration, KYC, and partnerships with a custodial / trust-account provider. Real legal lift, real differentiation. **Scope note (post-Codex review):** the *concept* lives in the v0 demo to validate the UX. Production money-release ships **no earlier than Phase 3** — it needs legal counsel, payment-partner due diligence, fraud controls, AML/KYC, dispute handling, and explicit jurisdictional review. Until then the UI carries an "in concept" badge and the money fields are not write-enabled against any real backend.
 - **Death-triggered vault release** with named verifiers + legal hold flow + 14-day cool-off
-- **Family Moments** (pulled from Phase 3 after user research). A planning + event surface scoped to a single real-world family event (vacation, reunion, holiday). Inside one Moment: date voting, location voting (with photo cards), packing/menu lists with assignees, planning chatter. During the event: photos/voice/video auto-collect into the Moment's timeline. After the event: the whole thing — votes, lists, chatter, media — becomes a chapter in the family book. The deliberate distinction from "WhatsApp for families": planning artifacts are *archived as memory*, not ephemeral chat.
+- **Family Moments** (pulled from Phase 3 after user research). A planning + event surface scoped to a single real-world family event (vacation, reunion, holiday). Inside one Moment: date voting, location voting (with photo cards), packing/menu lists with assignees, planning chatter. During the event: photos/voice/video auto-collect into the Moment's timeline. After the event: the whole thing — votes, lists, chatter, media — becomes a chapter in the family book. The deliberate distinction from "WhatsApp for families": planning artifacts are _archived as memory_, not ephemeral chat.
 - AI book/PDF export (per person, per relationship, per Moment)
 - AI-generated chapter titles & summaries
 - Audio-only memoir mode
@@ -497,6 +511,7 @@ Everything else: Auth & onboarding · Branch create/join · Invites (SMS, email,
 **Search:** Postgres full-text (`tsvector`) for keyword + pgvector cosine similarity for semantic. Combined re-rank in app code with a tunable hybrid score (BM25-ish FTS + embedding distance). No Elasticsearch in MVP.
 
 **Background jobs:** Supabase Edge Functions triggered by:
+
 - Storage `INSERT` (new media → enqueue transcription)
 - Database `INSERT` on `memory_items.kind='answer'` (→ enqueue tagging + follow-up suggestion)
 - Scheduled cron (`pg_cron`) every 15 min for vault release checks
@@ -514,19 +529,19 @@ For long-running tasks (book exports), add a small Cloudflare Worker or fly.io w
 
 ### Summary table
 
-| Layer | Choice | Why |
-|---|---|---|
-| Mobile | React Native + Expo + TypeScript | One codebase, fast, mature media + share-extension support |
-| UI lib | Tamagui | Compiled, fast, tokenizable |
-| State | TanStack Query + Zustand | Server cache + simple local state |
-| Offline | MMKV + outbox table | Linda's Wi-Fi drops; never lose a recording |
-| Backend | Supabase (Postgres + Auth + Storage + Edge Functions + Realtime) | RLS is perfect for the permission model |
-| Media | Supabase Storage → Cloudflare R2 + Stream later | Provider-agnostic media table |
-| AI transcription | Whisper or Deepgram | Cheap, accurate |
-| AI reasoning | Claude (Haiku + Sonnet) | Best instruction following for tagging/summaries |
-| Search | Postgres FTS + pgvector | No second search infra needed |
-| Push | Expo Push → APNS later | Easy MVP, swap when needed |
-| Analytics | PostHog (no-content), Sentry | Privacy-respecting |
+| Layer            | Choice                                                           | Why                                                        |
+| ---------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| Mobile           | React Native + Expo + TypeScript                                 | One codebase, fast, mature media + share-extension support |
+| UI lib           | Tamagui                                                          | Compiled, fast, tokenizable                                |
+| State            | TanStack Query + Zustand                                         | Server cache + simple local state                          |
+| Offline          | MMKV + outbox table                                              | Linda's Wi-Fi drops; never lose a recording                |
+| Backend          | Supabase (Postgres + Auth + Storage + Edge Functions + Realtime) | RLS is perfect for the permission model                    |
+| Media            | Supabase Storage → Cloudflare R2 + Stream later                  | Provider-agnostic media table                              |
+| AI transcription | Whisper or Deepgram                                              | Cheap, accurate                                            |
+| AI reasoning     | Claude (Haiku + Sonnet)                                          | Best instruction following for tagging/summaries           |
+| Search           | Postgres FTS + pgvector                                          | No second search infra needed                              |
+| Push             | Expo Push → APNS later                                           | Easy MVP, swap when needed                                 |
+| Analytics        | PostHog (no-content), Sentry                                     | Privacy-respecting                                         |
 
 ---
 
@@ -882,7 +897,7 @@ This app holds the most emotionally valuable content a family will ever produce.
 3. **Storage** — media is private by default; access is via short-lived signed URLs minted only after an RLS-passing query.
 4. **Crypto** — at rest on disk (Postgres + S3-class storage encryption). TLS 1.3 in transit. Vault items get a per-item content key, wrapped with the family's KMS key (Phase 2; AES-256 envelope encryption).
 5. **Account-level controls** — biometric lock, recovery via verified backup channel, no SSO into third parties without explicit opt-in.
-6. **Family-level controls** — admin can remove a member; on removal, that user's *future* read access stops immediately; their *past* contributions remain (configurable per family).
+6. **Family-level controls** — admin can remove a member; on removal, that user's _future_ read access stops immediately; their _past_ contributions remain (configurable per family).
 7. **AI controls** — opt-in per family for AI features; opt-out at any time; AI requests never log content beyond what is necessary; no third-party AI is given persistent access to media.
 8. **Audit** — every membership change, vault state change, export, and deletion is in `audit_log`. Visible to admins.
 
@@ -940,7 +955,7 @@ A `pg_cron` job runs every 15 minutes. For each `vault_items` row in status `sch
 1. Atomically updates `vault_items.status = 'released'` and `released_at = now()`.
 2. Mutates the linked `memory_items.visibility_rule_id` to the post-release rule (creating a new rule sourced from the recipients).
 3. Inserts `timeline_placements` for each recipient's personal timeline and the relationship timeline.
-4. Sends push notifications to recipients with a deliberately gentle copy: *"A message from Mom is now ready for you."*
+4. Sends push notifications to recipients with a deliberately gentle copy: _"A message from Mom is now ready for you."_
 5. Writes to `audit_log`.
 
 ### Membership removal
@@ -1021,6 +1036,7 @@ Failure handling: retry 3× with exponential backoff; on persistent failure, sto
 Trigger: `INSERT` on `memory_items` for kinds `answer`, `post`, `vault_message`, `imported_post`. Wait for transcription if media is present.
 
 Process:
+
 1. Compose a Claude Haiku call with: the question body (if any) + the answer text + the transcript + the importer note + the existing tag taxonomy.
 2. Prompt asks for up to 3 topic tags from a fixed taxonomy + a confidence score per tag.
 3. Write rows to `ai_tags` with `source='ai'`.
@@ -1035,12 +1051,14 @@ Tag taxonomy (MVP):
 Trigger: on insert of `answer`.
 
 Process:
+
 1. Fetch the question + answer + last N memories in the same relationship timeline.
 2. Claude Sonnet call with a prompt that emphasizes: warm, specific, not generic, ≤ 14 words, no clichés.
 3. Save up to 3 candidates to `prompt_suggestions` for the original asker.
 4. Surface in the asker's "Ask" screen as gentle suggestions, never auto-send.
 
 Example output for the Chicken in a Biskit answer:
+
 - "What was the first snack you bought with your own money?"
 - "Did you ever pack lunch for school? What was in it?"
 - "Is there a snack you wish I'd grown up with?"
@@ -1048,6 +1066,7 @@ Example output for the Chicken in a Biskit answer:
 #### J.4 Search
 
 Hybrid:
+
 1. Query gets a Postgres FTS search across `memory_items.body`, `memory_items.context_note`, and joined `transcriptions.text`.
 2. Same query gets an embedding (OpenAI/Voyage) and a `vector` cosine search against `embeddings`.
 3. Results merged with a tunable weighted score; deduped by `memory_id`.
@@ -1056,6 +1075,7 @@ Hybrid:
 #### J.5 Chapter & relationship summaries (Phase 2)
 
 Run nightly per active timeline:
+
 1. Take the last 30 days of placements.
 2. Generate (a) a chapter title for the period and (b) a 2–3 sentence summary, both labeled AI and editable.
 3. Cache in a `timeline_summaries` table (added in Phase 2).
@@ -1063,6 +1083,7 @@ Run nightly per active timeline:
 #### J.6 Book export (Phase 2)
 
 For a chosen scope (personal | relationship | family):
+
 1. Pull all relevant memories with placements.
 2. Outline → chapters by topic and time period.
 3. For each memory, prefer the user-written body; for media-only memories, use the transcript with a light cleanup pass.
@@ -1073,6 +1094,7 @@ For a chosen scope (personal | relationship | family):
 ### Cost & latency model (rough, MVP scale)
 
 Assume 100 active families × 4 members × 6 voice/video answers per week of avg 90s each:
+
 - ~2,400 transcriptions/week × 90s = 60h/week of audio
 - Whisper-class: ~$0.006/min → ~$22/week
 - Tagging (Haiku): 2,400 calls × ~$0.0006 → ~$1.50/week
@@ -1205,17 +1227,20 @@ Every empty state must include: a soft illustration (no people, just objects —
 ### Notification copy guidelines
 
 Always emotional, never urgent. Examples (good):
+
 - "Aaron asked you a memory question."
 - "A message from Mom is now ready for you."
 - "This week your family added 4 new memories. Take a look."
 
 Never (bad):
+
 - "You have 3 unread messages."
 - "Don't miss out — answer now!"
 
 ### Onboarding tone
 
 Use sentences, not feature bullets. Sample copy:
+
 - Screen 1: "Welcome. This is a quiet place for your family." (Tagline: "Ask anything. Save every answer.")
 - Screen 2: "We'll keep everything between the people you choose."
 - Screen 3: "Add your family. The app feels different once they're here."
@@ -1229,11 +1254,12 @@ Use sentences, not feature bullets. Sample copy:
 
 - This is a family product paid by one person (the Initiator) on behalf of many users (the Family).
 - Free tier exists to let elders try without friction; paid tier is for the household.
-- Pricing is *family-based*, not per seat. Charging per grandparent kills adoption.
+- Pricing is _family-based_, not per seat. Charging per grandparent kills adoption.
 
 ### Tiers
 
 **Free — "Try It"**
+
 - 1 family circle
 - Up to 6 members
 - Text-only questions and answers, unlimited
@@ -1245,6 +1271,7 @@ Use sentences, not feature bullets. Sample copy:
 - Designed to demonstrate value; not designed to last forever.
 
 **Family — $14.99/month or $129/year**
+
 - Up to 12 members
 - Unlimited voice and video answers (3-min cap per item)
 - 100 GB storage
@@ -1255,6 +1282,7 @@ Use sentences, not feature bullets. Sample copy:
 - Standard export (JSON + media zip)
 
 **Legacy — $29.99/month or $249/year**
+
 - Up to 25 members
 - 1 TB storage
 - All Family features, plus:
@@ -1266,6 +1294,7 @@ Use sentences, not feature bullets. Sample copy:
 - White-glove onboarding for elders (Phase 3)
 
 **Lifetime — $999 one-time (limited; Phase 3)**
+
 - Legacy features forever for one family
 - Includes a hardcover annual book each year for 5 years
 - Sold sparingly as a serious commitment product
@@ -1312,11 +1341,13 @@ Use sentences, not feature bullets. Sample copy:
 ### Quarter view
 
 **Q1 (months 1–3)** — Foundations + MVP build
+
 - Hire: 1 founding designer, 2 full-stack engineers (RN + Supabase), 1 part-time iOS specialist for recording surfaces.
 - Build: auth, circle, profiles, relationships, Ask, Answer (text/voice/video), feed, basic timelines, basic Vault, transcription, tagging, search, notifications, weekly digest.
 - Closed alpha with ~15 families (founder network).
 
 **Q2 (months 4–6)** — Launch MVP + early polish
+
 - Public beta on App Store with paywall.
 - Onboarding tuning for elders (the make-or-break work).
 - Push notification copy A/B.
@@ -1325,6 +1356,7 @@ Use sentences, not feature bullets. Sample copy:
 - Sales push: gift flow for Mother's Day.
 
 **Q3 (months 7–9)** — Depth
+
 - Video memory replies on imported posts.
 - Advanced Vault: milestone & death-triggered releases (with named verifiers).
 - AI book export v1.
@@ -1332,12 +1364,14 @@ Use sentences, not feature bullets. Sample copy:
 - Begin Android client (1 engineer).
 
 **Q4 (months 10–12)** — Compounding
+
 - AI chat trained on your family memories ("Ask the archive").
 - Annual recap auto-generated and gifted to families.
 - Hardcover book product live with a print partner.
 - Family tree visualization.
 
 **Year 2 (months 13–18)** — Long-tail
+
 - Web read-only access.
 - Multiple circles per user.
 - Voice cloning for narration (opt-in, watermarked).
@@ -1501,6 +1535,7 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Why hard:** Notification permission, sign-in, recording permission, and one successful answer all have to succeed on day 1, often in a setting where Aaron is showing his mom the app, not where Linda is exploring it solo.
 
 **Mitigations:**
+
 - Co-pilot mode for elders during onboarding (Aaron literally drives Linda's first answer on her phone).
 - Answer-via-link fallback: if Linda can't get the app working, the asker can text her a one-tap link that opens a minimal browser page where she records her answer (Phase 2).
 - Real-world user research with elders weekly, recorded sessions, optimize ruthlessly for first-answer completion.
@@ -1512,6 +1547,7 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Why hard:** complex visibility rules, RLS bugs can be silent, signed URLs can be misused, AI vendors can leak.
 
 **Mitigations:**
+
 - RLS-first architecture; never filter in app code.
 - Property-based tests for visibility (generate random combinations of authors, viewers, rules, and assert allowed/denied).
 - Quarterly external pentest.
@@ -1525,6 +1561,7 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Why hard:** A vault of high-bitrate videos for a family of 10 over 20 years is non-trivial.
 
 **Mitigations:**
+
 - Transcode to HLS with sane bitrate ladders.
 - Migrate large objects to Cloudflare R2 + Stream when egress > 5 TB/mo (zero egress fees from R2).
 - Per-family storage caps with overage purchase.
@@ -1537,13 +1574,14 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Why hard:** there is no clean signal for death; humans must be involved.
 
 **Mitigations:**
+
 - Phase 2 only. Require 2 named verifiers + a death certificate upload reviewed by ops.
 - Mandatory 14-day cooling-off period before any after-death release fires.
 - Annual "are you still you?" check-in for users with after-death vault items pending, with an explicit "I'm here" confirmation that resets the verification clock.
 
 ### O.5 Multi-recipient questions and divergent answers
 
-**Risk:** Aaron asks Mom *and* Dad the same question; the data model has to keep answers separate per recipient while linking them logically.
+**Risk:** Aaron asks Mom _and_ Dad the same question; the data model has to keep answers separate per recipient while linking them logically.
 
 **Mitigation:** `question_recipients` is the source of truth for the per-recipient state; each answer is its own `memory_items` row with `related_question_id` pointing back. Relationship timelines pull only the answer relevant to that pair.
 
@@ -1558,6 +1596,7 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Risk:** divorce, estrangement, abuse. The app holds intimate content that can become weaponized.
 
 **Mitigations:**
+
 - Robust admin transfer + circle exit with content rights honored (each member can take their own contributions; family decides whether others' visible content stays accessible to a leaver).
 - Blocked members can't see new content from blockers (in-circle blocks).
 - Clear deletion paths for content involving a removed/blocked member.
@@ -1574,16 +1613,18 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Risk:** AI invents chapter titles, summaries, or follow-ups that misrepresent the family.
 
 **Mitigations:**
+
 - Anything user-facing is one-tap editable.
 - Summaries shown alongside source memories, not in place of them.
 - A "Show me the source" affordance on every AI artifact.
-- Never let AI re-write a user's actual words; it can summarize *around* them, not over them.
+- Never let AI re-write a user's actual words; it can summarize _around_ them, not over them.
 
 ### O.10 Long-term data durability
 
 **Risk:** the app or company disappears. The family loses everything.
 
 **Mitigations:**
+
 - First-class export (zip + JSON) always available, no paywall.
 - A documented data schema published in the Trust Center.
 - A clear plan: if the company shuts down, customers get 12 months of read-only access and free export.
@@ -1594,6 +1635,7 @@ Honest list. Each item names the risk, why it's hard, and the mitigation.
 **Risk:** Apple rejects for reasons related to user-generated content, age rating, or subscription terms.
 
 **Mitigations:**
+
 - Content reporting + blocking + moderation policy in place at launch.
 - Age 17+ rating (UGC).
 - Subscription terms presented exactly per App Store guidelines (App Store-only billing for app subscriptions; physical products via web checkout to avoid 30% on print).
@@ -1694,4 +1736,3 @@ If you discover the spec is wrong or ambiguous, **stop and propose a delta** bef
 Build slowly. Build kindly. This app is going to hold the most important moments in people's lives.
 
 — end of build prompt —
-

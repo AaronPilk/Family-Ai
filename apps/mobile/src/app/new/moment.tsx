@@ -11,8 +11,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { BRANCHES, MEMBERS, ME, type MemberId, type BranchId, type FamilyMoment } from '../../lib/mockData';
-import { useBranchStore, useVisibleBranches, useCurrentBranch } from '../../lib/branchStore';
+import {
+  BRANCHES,
+  MEMBERS,
+  ME,
+  type MemberId,
+  type BranchId,
+  type FamilyMoment,
+} from '../../lib/mockData';
+import { useVisibleBranches, useWritableBranchId } from '../../lib/branchStore';
 import { useMomentStore } from '../../lib/momentStore';
 import { Avatar } from '../../components/Avatar';
 
@@ -21,10 +28,13 @@ const GLYPHS = ['🏔', '🏖', '🍂', '🎄', '🎂', '✈️', '🍷', '🏕'
 export default function NewMoment() {
   const insets = useSafeAreaInsets();
   const visible = useVisibleBranches();
-  const current = useCurrentBranch();
+  const writable = useWritableBranchId();
   const addMoment = useMomentStore((s) => s.addMoment);
 
-  const initialBranch: BranchId = (visible.find((b) => b.id === current.id)?.id ?? visible[0]?.id ?? 'pilks') as BranchId;
+  // If the user is in the "All my family" scope, force them to pick a concrete
+  // branch — Moments need a single owning branch. (Codex H-M2 — prevent silent
+  // writes to a synthetic branch.)
+  const initialBranch: BranchId = (writable ?? visible[0]?.id ?? 'pilks') as BranchId;
 
   const [title, setTitle] = useState('');
   const [dateRange, setDateRange] = useState('');
@@ -38,9 +48,7 @@ export default function NewMoment() {
 
   function toggleInvite(id: MemberId) {
     if (id === ME) return; // you're always in
-    setInvited((cur) =>
-      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
-    );
+    setInvited((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   }
 
   function handleSave() {
@@ -60,9 +68,7 @@ export default function NewMoment() {
       datePoll: [],
       locationPoll: [],
       packingList: [],
-      activity: [
-        { id: 'a-init', authorId: ME, body: 'Created this Moment.', whenAgo: 'just now' },
-      ],
+      activity: [{ id: 'a-init', authorId: ME, body: 'Created this Moment.', whenAgo: 'just now' }],
     };
     addMoment(newMoment);
     router.replace(`/moment/${id}`);
@@ -87,8 +93,16 @@ export default function NewMoment() {
         <Text style={{ fontSize: 28, fontWeight: '700', color: tokens.color.textPrimary }}>
           Plan something together
         </Text>
-        <Text style={{ fontSize: 15, color: tokens.color.textSecondary, lineHeight: 22, marginTop: -10 }}>
-          Family votes on dates and places. Everyone's photos collect here during the event. After it, the whole thing becomes a chapter.
+        <Text
+          style={{
+            fontSize: 15,
+            color: tokens.color.textSecondary,
+            lineHeight: 22,
+            marginTop: -10,
+          }}
+        >
+          Family votes on dates and places. Everyone's photos collect here during the event. After
+          it, the whole thing becomes a chapter.
         </Text>
 
         <Field label="WHAT'S IT CALLED?">
@@ -124,7 +138,8 @@ export default function NewMoment() {
                   width: 52,
                   height: 52,
                   borderRadius: 14,
-                  backgroundColor: g === glyph ? tokens.color.accentPrimary + '15' : tokens.color.bgPrimary,
+                  backgroundColor:
+                    g === glyph ? tokens.color.accentPrimary + '15' : tokens.color.bgPrimary,
                   borderWidth: 1.5,
                   borderColor: g === glyph ? tokens.color.accentPrimary : tokens.color.borderSubtle,
                   alignItems: 'center',
@@ -166,8 +181,12 @@ export default function NewMoment() {
                       gap: 8,
                     })}
                   >
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: b.color }} />
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}>
+                    <View
+                      style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: b.color }}
+                    />
+                    <Text
+                      style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}
+                    >
                       {b.shortName}
                     </Text>
                   </Pressable>
@@ -205,7 +224,9 @@ export default function NewMoment() {
                 >
                   <Avatar member={m} size="sm" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}
+                    >
                       {m.name}
                     </Text>
                     <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
@@ -219,12 +240,16 @@ export default function NewMoment() {
                       borderRadius: 11,
                       backgroundColor: included ? tokens.color.accentPrimary : 'transparent',
                       borderWidth: 2,
-                      borderColor: included ? tokens.color.accentPrimary : tokens.color.borderStrong,
+                      borderColor: included
+                        ? tokens.color.accentPrimary
+                        : tokens.color.borderStrong,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {included && <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>✓</Text>}
+                    {included && (
+                      <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>✓</Text>
+                    )}
                   </View>
                 </Pressable>
               );
@@ -244,9 +269,7 @@ export default function NewMoment() {
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>
-            Create Moment
-          </Text>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>Create Moment</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -265,7 +288,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         paddingVertical: 12,
       }}
     >
-      <Text style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}>
+      <Text
+        style={{ fontSize: 11, color: tokens.color.textMuted, marginBottom: 4, fontWeight: '700' }}
+      >
         {label}
       </Text>
       {children}

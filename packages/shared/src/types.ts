@@ -5,25 +5,42 @@
  */
 
 export type RelationshipType =
-  | 'parent' | 'child' | 'grandparent' | 'grandchild' | 'sibling'
-  | 'spouse' | 'aunt_uncle' | 'niece_nephew' | 'cousin' | 'chosen_family' | 'custom';
+  | 'parent'
+  | 'child'
+  | 'grandparent'
+  | 'grandchild'
+  | 'sibling'
+  | 'spouse'
+  | 'aunt_uncle'
+  | 'niece_nephew'
+  | 'cousin'
+  | 'chosen_family'
+  | 'custom';
 
 export type MemoryKind =
-  | 'question' | 'answer' | 'post' | 'comment'
-  | 'vault_message' | 'imported_post' | 'milestone';
+  | 'question'
+  | 'answer'
+  | 'post'
+  | 'comment'
+  | 'vault_message'
+  | 'imported_post'
+  | 'milestone';
 
 export type MediaKind = 'image' | 'video' | 'audio' | 'document' | 'screenshot';
 
 export type TimelineKind = 'personal' | 'relationship' | 'family' | 'topic';
 
 export type VisibilityScope =
-  | 'only_me' | 'specific_users' | 'relationship_types'
-  | 'entire_circle' | 'vault' | 'future_release';
+  | 'only_me'
+  | 'specific_users'
+  | 'relationship_types'
+  | 'entire_circle'
+  | 'vault'
+  | 'future_release';
 
 export type MembershipRole = 'admin' | 'member' | 'co_pilot';
 
-export type VaultStatus =
-  | 'sealed' | 'scheduled' | 'released' | 'revoked' | 'awaiting_verification';
+export type VaultStatus = 'sealed' | 'scheduled' | 'released' | 'revoked' | 'awaiting_verification';
 
 export type VaultReleaseRule =
   | { type: 'on_date'; date: string /* YYYY-MM-DD */ }

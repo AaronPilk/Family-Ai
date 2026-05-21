@@ -2,14 +2,13 @@ import { router } from 'expo-router';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
+import { FEED, MEMBERS, BRANCHES, VISIBILITY_LABEL, type FeedItem } from '../../lib/mockData';
 import {
-  FEED,
-  MEMBERS,
-  BRANCHES,
-  VISIBILITY_LABEL,
-  type FeedItem,
-} from '../../lib/mockData';
-import { useScopedBranchIds, useSelection, useIsMultiBranch, useCurrentBranch } from '../../lib/branchStore';
+  useScopedBranchIds,
+  useSelection,
+  useIsMultiBranch,
+  useCurrentBranch,
+} from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 
 export default function FeedScreen() {
@@ -149,7 +148,9 @@ function FeedCard({ item, showBranch }: { item: FeedItem; showBranch?: boolean }
           </Text>
         </View>
       </View>
-      <Text style={{ marginTop: 12, fontSize: 16, lineHeight: 24, color: tokens.color.textPrimary }}>
+      <Text
+        style={{ marginTop: 12, fontSize: 16, lineHeight: 24, color: tokens.color.textPrimary }}
+      >
         {item.body}
       </Text>
       {item.mediaKind === 'photo' && (

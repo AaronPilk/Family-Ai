@@ -4,12 +4,7 @@ import { ScrollView, View, Text, Pressable, TextInput } from 'react-native';
 import { comingSoon } from '../../lib/comingSoon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import {
-  SUGGESTED_QUESTIONS,
-  MEMBERS,
-  BRANCHES,
-  type MemberId,
-} from '../../lib/mockData';
+import { SUGGESTED_QUESTIONS, MEMBERS, BRANCHES, type MemberId } from '../../lib/mockData';
 import {
   useCurrentBranch,
   useIsMultiBranch,
@@ -88,7 +83,13 @@ export default function AskScreen() {
               lineHeight: 22,
             }}
           >
-            Pick someone {isMulti ? (sel === 'all' ? 'across your family' : `in ${branch.shortName}`) : 'in your family'} and ask them anything. They'll get a gentle nudge.
+            Pick someone{' '}
+            {isMulti
+              ? sel === 'all'
+                ? 'across your family'
+                : `in ${branch.shortName}`
+              : 'in your family'}{' '}
+            and ask them anything. They'll get a gentle nudge.
           </Text>
         </View>
 
@@ -108,14 +109,10 @@ export default function AskScreen() {
                   style={{
                     width: 92,
                     paddingVertical: 14,
-                    backgroundColor: isSel
-                      ? tokens.color.bgTinted
-                      : tokens.color.bgPrimary,
+                    backgroundColor: isSel ? tokens.color.bgTinted : tokens.color.bgPrimary,
                     borderRadius: 18,
                     borderWidth: 1.5,
-                    borderColor: isSel
-                      ? tokens.color.accentPrimary
-                      : tokens.color.borderSubtle,
+                    borderColor: isSel ? tokens.color.accentPrimary : tokens.color.borderSubtle,
                     alignItems: 'center',
                     gap: 8,
                   }}
@@ -219,9 +216,7 @@ export default function AskScreen() {
                 >
                   ASK {MEMBERS[s.ask].relationship.toUpperCase()}
                 </Text>
-                <Text
-                  style={{ fontSize: 16, color: tokens.color.textPrimary, lineHeight: 22 }}
-                >
+                <Text style={{ fontSize: 16, color: tokens.color.textPrimary, lineHeight: 22 }}>
                   {s.text}
                 </Text>
               </Pressable>

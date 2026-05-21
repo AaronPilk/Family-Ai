@@ -16,9 +16,7 @@ export default function TopicTimeline() {
   // Filter memories by topic label (case-insensitive) within scope
   const items = FEED.filter(
     (f) =>
-      scopedIds.includes(f.branchId) &&
-      f.topic &&
-      f.topic.toLowerCase() === label.toLowerCase(),
+      scopedIds.includes(f.branchId) && f.topic && f.topic.toLowerCase() === label.toLowerCase(),
   );
 
   return (
@@ -54,7 +52,14 @@ export default function TopicTimeline() {
           <Text style={{ fontSize: 20, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: tokens.color.accentPrimary, letterSpacing: 1.5 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '700',
+              color: tokens.color.accentPrimary,
+              letterSpacing: 1.5,
+            }}
+          >
             TOPIC TIMELINE
           </Text>
           <Text style={{ fontSize: 20, fontWeight: '700', color: tokens.color.textPrimary }}>
@@ -103,7 +108,10 @@ function TopicCard({ item }: { item: FeedItem }) {
         <Avatar member={author} size="sm" />
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}>
-            {author.name} <Text style={{ color: tokens.color.textMuted, fontWeight: '400' }}>· {author.relationship}</Text>
+            {author.name}{' '}
+            <Text style={{ color: tokens.color.textMuted, fontWeight: '400' }}>
+              · {author.relationship}
+            </Text>
           </Text>
           <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
             {item.whenAgo} · {branch.shortName}

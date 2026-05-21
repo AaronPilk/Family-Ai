@@ -53,13 +53,37 @@ export default function HowItWorks() {
             gap: 14,
           }}
         >
-          <Text style={{ fontSize: 13, color: tokens.color.accentPrimary, fontWeight: '700', letterSpacing: 1 }}>
+          <Text
+            style={{
+              fontSize: 13,
+              color: tokens.color.accentPrimary,
+              fontWeight: '700',
+              letterSpacing: 1,
+            }}
+          >
             EXAMPLE
           </Text>
-          <Text style={{ fontSize: 17, lineHeight: 24, color: tokens.color.textPrimary, fontWeight: '500' }}>
-            You ask Mom: <Text style={{ fontStyle: 'italic' }}>"What did you eat with Chicken in a Biskit crackers as a kid?"</Text>
+          <Text
+            style={{
+              fontSize: 17,
+              lineHeight: 24,
+              color: tokens.color.textPrimary,
+              fontWeight: '500',
+            }}
+          >
+            You ask Mom:{' '}
+            <Text style={{ fontStyle: 'italic' }}>
+              "What did you eat with Chicken in a Biskit crackers as a kid?"
+            </Text>
           </Text>
-          <Text style={{ fontSize: 17, lineHeight: 24, color: tokens.color.textPrimary, fontWeight: '500' }}>
+          <Text
+            style={{
+              fontSize: 17,
+              lineHeight: 24,
+              color: tokens.color.textPrimary,
+              fontWeight: '500',
+            }}
+          >
             Mom records a 47-second voice answer.
           </Text>
           <View style={{ gap: 10, marginTop: 4 }}>
@@ -67,7 +91,9 @@ export default function HowItWorks() {
             <FanOutLine label="You ↔ Mom" subtitle="The story between just the two of you" />
             <FanOutLine label="Food memories" subtitle="A topic timeline across the whole family" />
           </View>
-          <Text style={{ fontSize: 14, color: tokens.color.textMuted, lineHeight: 20, marginTop: 4 }}>
+          <Text
+            style={{ fontSize: 14, color: tokens.color.textMuted, lineHeight: 20, marginTop: 4 }}
+          >
             One answer, three places. Search any of them, find it. Print a book of any of them, it's
             organized.
           </Text>
@@ -89,10 +115,7 @@ export default function HowItWorks() {
           />
         </View>
 
-        <PrimaryNext
-          label="Enter Kin"
-          onPress={() => router.replace('/(tabs)')}
-        />
+        <PrimaryNext label="Enter Kin" onPress={() => router.replace('/(tabs)')} />
       </ScrollView>
     </View>
   );

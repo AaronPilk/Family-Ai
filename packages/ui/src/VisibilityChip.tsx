@@ -13,18 +13,8 @@ const LABELS: Record<VisibilityScope, string> = {
 export function VisibilityChip({ scope }: { scope: VisibilityScope }) {
   const isVault = scope === 'vault' || scope === 'future_release';
   return (
-    <XStack
-      ai="center"
-      px="$3"
-      py="$1"
-      br="$10"
-      bg={isVault ? '#FFF1E5' : '$backgroundHover'}
-    >
-      <Paragraph
-        fontSize={13}
-        fontWeight="500"
-        color={isVault ? '#A56627' : '$accent'}
-      >
+    <XStack ai="center" px="$3" py="$1" br="$10" bg={isVault ? '#FFF1E5' : '$backgroundHover'}>
+      <Paragraph fontSize={13} fontWeight="500" color={isVault ? '#A56627' : '$accent'}>
         {LABELS[scope]}
       </Paragraph>
     </XStack>

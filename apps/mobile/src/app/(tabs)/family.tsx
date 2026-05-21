@@ -24,9 +24,9 @@ export default function FamilyScreen() {
   const disableBlended = useBranchStore((s) => s.disableBlendedDemo);
 
   // Members across in-scope branches, deduped, excluding 'me'
-  const memberIds = Array.from(
-    new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds)),
-  ).filter((id) => id !== 'me') as MemberId[];
+  const memberIds = Array.from(new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds))).filter(
+    (id) => id !== 'me',
+  ) as MemberId[];
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
@@ -109,8 +109,8 @@ export default function FamilyScreen() {
               }}
             >
               <Text style={{ fontSize: 14, color: tokens.color.textPrimary, lineHeight: 20 }}>
-                Some families need separate branches — divorced parents, in-laws, chosen family,
-                or a tighter inner circle. You can add one anytime.
+                Some families need separate branches — divorced parents, in-laws, chosen family, or
+                a tighter inner circle. You can add one anytime.
               </Text>
               <Pressable
                 onPress={() => router.push('/new/branch')}
@@ -165,9 +165,7 @@ export default function FamilyScreen() {
               gap: 12,
             }}
           >
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.color.textPrimary }}>
                   Show blended-family branches
@@ -260,9 +258,7 @@ function MemberRow({
           </View>
         )}
       </View>
-      {memberId !== 'me' && (
-        <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>
-      )}
+      {memberId !== 'me' && <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>}
     </Pressable>
   );
 }

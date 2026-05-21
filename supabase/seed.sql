@@ -1,2 +1,3 @@
--- Convenience: load seed data after migrations run.
-\i ../packages/db/seeds/prompt_templates.sql
+-- Seed files are listed in supabase/config.toml under [db.seed].sql_paths.
+-- Add new seed files there instead of using \i (Supabase CLI does not execute
+-- psql backslash commands during `db reset`).

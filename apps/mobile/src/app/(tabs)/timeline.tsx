@@ -6,6 +6,7 @@ import { tokens } from '../../theme/tokens';
 import {
   FEED,
   MEMBERS,
+  MEMORIES_WITH,
   BRANCHES,
   TOPICS,
   ME,
@@ -44,9 +45,9 @@ export default function TimelineScreen() {
   const mine = scopedFeed.filter((f) => f.authorId === ME || f.relatedToName === 'Aaron');
 
   // Members across in-scope branches
-  const memberIds = Array.from(
-    new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds)),
-  ).filter((id) => id !== 'me') as MemberId[];
+  const memberIds = Array.from(new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds))).filter(
+    (id) => id !== 'me',
+  ) as MemberId[];
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
@@ -75,9 +76,7 @@ export default function TimelineScreen() {
           Timeline
         </Text>
         <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: -2 }}>
-          {isMulti && sel === 'all'
-            ? 'Across all your family'
-            : `In ${branch.shortName}`}
+          {isMulti && sel === 'all' ? 'Across all your family' : `In ${branch.shortName}`}
         </Text>
 
         {/* Segmented control */}
@@ -124,8 +123,12 @@ export default function TimelineScreen() {
         }}
       >
         {seg === 'mine' && <MineList items={mine} />}
-        {seg === 'family' && <FamilyList items={scopedFeed} showBranch={isMulti && sel === 'all'} />}
-        {seg === 'people' && <PeopleList memberIds={memberIds} showBranch={isMulti && sel === 'all'} />}
+        {seg === 'family' && (
+          <FamilyList items={scopedFeed} showBranch={isMulti && sel === 'all'} />
+        )}
+        {seg === 'people' && (
+          <PeopleList memberIds={memberIds} showBranch={isMulti && sel === 'all'} />
+        )}
         {seg === 'topics' && <TopicGrid />}
       </ScrollView>
     </View>
@@ -134,7 +137,12 @@ export default function TimelineScreen() {
 
 function MineList({ items }: { items: FeedItem[] }) {
   if (items.length === 0) {
-    return <EmptyHint title="You haven't added anything yet." subtitle="Answer a question or ask Mom something to start your story." />;
+    return (
+      <EmptyHint
+        title="You haven't added anything yet."
+        subtitle="Answer a question or ask Mom something to start your story."
+      />
+    );
   }
   return (
     <View style={{ gap: 12 }}>
@@ -203,8 +211,15 @@ function PeopleList({ memberIds, showBranch }: { memberIds: MemberId[]; showBran
                 {m.relationship}
                 {m.age ? ` · ${m.age}` : ''}
               </Text>
-              <Text style={{ fontSize: 13, color: tokens.color.accentPrimary, marginTop: 6, fontWeight: '600' }}>
-                {Math.floor(Math.random() * 30) + 6} memories together
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: tokens.color.accentPrimary,
+                  marginTop: 6,
+                  fontWeight: '600',
+                }}
+              >
+                {MEMORIES_WITH[id] ?? 0} memories together
               </Text>
               {showBranch && inBranches.length > 1 && (
                 <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
@@ -284,7 +299,9 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
       <Text style={{ fontSize: 18, fontWeight: '700', color: tokens.color.textPrimary }}>
         {title}
       </Text>
-      <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2, fontStyle: 'italic' }}>
+      <Text
+        style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2, fontStyle: 'italic' }}
+      >
         {subtitle}
       </Text>
     </View>
@@ -337,7 +354,14 @@ function TimelineRow({ item, showBranch }: { item: FeedItem; showBranch?: boolea
           {item.body}
         </Text>
         {item.topic && (
-          <Text style={{ fontSize: 12, color: tokens.color.accentPrimary, marginTop: 6, fontWeight: '600' }}>
+          <Text
+            style={{
+              fontSize: 12,
+              color: tokens.color.accentPrimary,
+              marginTop: 6,
+              fontWeight: '600',
+            }}
+          >
             #{item.topic.toLowerCase()}
           </Text>
         )}
