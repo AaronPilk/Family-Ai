@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Kin",
+    "slug": "kin",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "kin",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kin.app"
+    },
+    "android": {
+      "package": "com.kin.app"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,54 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.pnpm-store/
+.npm
+.yarn/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+.next/
+.expo/
+.expo-shared/
+web-build/
+*.tsbuildinfo
+
+# Native
+ios/Pods/
+ios/build/
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+*.xcuserstate
+
+# Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# Coverage
+coverage/
+
+# Logs
+logs/

@@ -1,0 +1,56 @@
+# Supabase project config — see https://supabase.com/docs/guides/cli/config
+project_id = "kin"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+file_size_limit = "500MiB"
+
+[auth]
+enabled = true
+site_url = "kin://"
+additional_redirect_urls = ["kin://**"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+
+[auth.external.apple]
+enabled = true
+client_id = "env(APPLE_CLIENT_ID)"
+secret = "env(APPLE_SECRET)"
+url = ""
+redirect_uri = ""
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+
+[analytics]
+enabled = false

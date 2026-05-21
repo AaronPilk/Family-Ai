@@ -1,0 +1,169 @@
+import { Alert } from 'react-native';
+
+type Feature =
+  | 'new_moment'
+  | 'new_branch'
+  | 'invite'
+  | 'new_vault'
+  | 'photo_book'
+  | 'search'
+  | 'notifications'
+  | 'settings_row'
+  | 'send_question'
+  | 'record_voice'
+  | 'record_video'
+  | 'attach_photo'
+  | 'skip_prompt'
+  | 'today_prompt'
+  | 'feed_post'
+  | 'see_whole_feed'
+  | 'open_vault_item'
+  | 'open_memory'
+  | 'open_topic'
+  | 'message_everyone'
+  | 'add_to_packing'
+  | 'generate_book'
+  | 'profile_tab_questions'
+  | 'profile_tab_vault'
+  | 'profile_tab_about'
+  | 'view_vault_for_me'
+  | 'react_or_comment';
+
+const COPY: Record<Feature, { title: string; message: string }> = {
+  new_moment: {
+    title: 'Plan a new Family Moment',
+    message:
+      'Opens a form: name the event, set the date window, pick the branch, invite participants. The family then votes on dates, locations, packing list, menu. After the event the whole thing becomes a chapter in the family book.',
+  },
+  new_branch: {
+    title: 'Start another branch',
+    message:
+      'Branches let you keep separate spaces for divorced parents, in-laws, chosen family, or any group that shouldn\'t share a feed. Name it, invite who belongs, and you\'ll be able to switch between branches anytime.',
+  },
+  invite: {
+    title: 'Invite someone',
+    message:
+      'Pick the relationship, enter a phone or email, send. They get a soft text or email and can join when they\'re ready. The invite respects the branch you\'re in.',
+  },
+  new_vault: {
+    title: 'Record something for later',
+    message:
+      'Record a voice, video, or text message, then choose when it should be released — a date, a birthday, an age milestone, a life event (first child, marriage, graduation), or after your passing with named verifiers. Optionally tie a dollar amount to a milestone — funds held in escrow until release.',
+  },
+  photo_book: {
+    title: 'Digitize a photo book',
+    message:
+      'Point your phone at each page of a physical photo album. Kin extracts every individual photo, OCRs handwritten captions, asks who\'s in each photo, and adds them to the right personal/branch/topic timelines. Your binder lives forever.',
+  },
+  search: {
+    title: 'Search the family archive',
+    message:
+      'Find any answer, photo, voice note, or memory. Hybrid search: full-text plus semantic. "What did Mom say about snacks" surfaces the Chicken in a Biskit answer. RLS-filtered — you only see what you\'re allowed to.',
+  },
+  notifications: {
+    title: 'Notifications',
+    message:
+      'Gentle pushes: new question for you, someone answered your question, vault item about to release, weekly digest of what your family added.',
+  },
+  settings_row: {
+    title: 'Coming in Batch 1',
+    message: 'This setting will be functional once real auth and Supabase are wired.',
+  },
+  send_question: {
+    title: 'Send question',
+    message:
+      'In the real app this fires a push to the recipient ("Aaron asked you a memory question"), saves the question to your timeline + their inbox, and shows up immediately for them to answer.',
+  },
+  record_voice: {
+    title: 'Voice recording',
+    message:
+      'Tap-and-hold to record. Live waveform. Tap to stop. Save / re-record / send. Transcribes automatically once sent.',
+  },
+  record_video: {
+    title: 'Video recording',
+    message:
+      'Front- or back-camera, up to 3 minutes. Live preview. Auto-captioned after upload.',
+  },
+  attach_photo: {
+    title: 'Attach a photo',
+    message:
+      'Pick from your camera roll or take a new one. The photo becomes context for the question or memory.',
+  },
+  skip_prompt: {
+    title: 'Skip today\'s prompt',
+    message: 'A new prompt arrives tomorrow. Skipped prompts cycle back later at lower priority.',
+  },
+  today_prompt: {
+    title: 'Answer today\'s prompt',
+    message:
+      'Opens a focused composer for the daily prompt. Your answer lands in your personal timeline and the relevant topic timeline immediately.',
+  },
+  feed_post: {
+    title: 'Memory detail',
+    message:
+      'Tapping a memory opens a full-screen view with the original question (if any), the full media, reactions, comments, and the "appears in" timelines.',
+  },
+  see_whole_feed: {
+    title: 'See the whole family feed',
+    message: 'Opens an Instagram-style feed of everything in this branch, top to bottom.',
+  },
+  open_vault_item: {
+    title: 'Vault item detail',
+    message:
+      'Tapping a vault item lets you preview the media, edit the release rule, change recipients, or revoke it. After release, it shows the release event + reactions from recipients.',
+  },
+  open_memory: {
+    title: 'Memory detail',
+    message: 'Full-screen view of the memory: media, transcript, comments, where it lives in your timelines.',
+  },
+  open_topic: {
+    title: 'Topic timeline',
+    message:
+      'Every memory in your family tagged with this topic — reverse chronological, with AI section headers ("Spring 2026: a flurry of food memories").',
+  },
+  message_everyone: {
+    title: 'Message everyone in this Moment',
+    message:
+      'Opens a quick-message surface scoped to this Moment\'s participants. Different from the family feed — focused on the event.',
+  },
+  add_to_packing: {
+    title: 'Add to the packing list',
+    message:
+      'Type an item, assign someone, set a status. Family members can check things off as they\'re packed or bought.',
+  },
+  generate_book: {
+    title: 'Generate a book',
+    message:
+      'Kin compiles every memory authored by this person — answers, posts, voice notes, photos — into a printable book. AI writes the chapter headings; you review and edit before printing. Hardcover ships in ~10 days.',
+  },
+  profile_tab_questions: {
+    title: 'Questions',
+    message:
+      'This tab will show questions YOU\'ve asked this person — open and answered. You\'ll be able to filter by topic and time.',
+  },
+  profile_tab_vault: {
+    title: 'Vault for me',
+    message:
+      'Anything this person has sealed in the vault for you to receive in the future — birthday messages, milestone gifts, death-triggered letters. Locked until their release rules fire.',
+  },
+  profile_tab_about: {
+    title: 'About',
+    message:
+      'A page summarizing what you know about this person — their birth date, where they\'re from, key life events, and an AI-generated "what we\'ve learned about them" digest from their answers.',
+  },
+  view_vault_for_me: {
+    title: 'Vault for me',
+    message:
+      'Shows messages this person has prepared for you to receive in the future. Locked until their release rules fire.',
+  },
+  react_or_comment: {
+    title: 'React or comment',
+    message:
+      'Tap to add a heart, a voice-note reply, or a text comment. Comments become part of the relationship timeline too.',
+  },
+};
+
+export function comingSoon(feature: Feature) {
+  const { title, message } = COPY[feature];
+  Alert.alert(title, message, [{ text: 'Got it', style: 'default' }]);
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@kin/db",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Database migrations, seeds, and policies for Kin.",
+  "scripts": {
+    "typecheck": "echo 'no ts in db package'"
+  }
+}

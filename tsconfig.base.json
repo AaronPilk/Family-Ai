@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@kin/shared": ["./packages/shared/src/index.ts"],
+      "@kin/shared/*": ["./packages/shared/src/*"],
+      "@kin/ui": ["./packages/ui/src/index.ts"],
+      "@kin/ui/*": ["./packages/ui/src/*"]
+    }
+  }
+}

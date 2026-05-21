@@ -1,0 +1,20 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@kin/shared": ["../../packages/shared/src/index.ts"],
+      "@kin/shared/*": ["../../packages/shared/src/*"],
+      "@kin/ui": ["../../packages/ui/src/index.ts"],
+      "@kin/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
+}
