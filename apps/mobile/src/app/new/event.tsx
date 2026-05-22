@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { router } from 'expo-router';
 import {
   ScrollView,
@@ -14,6 +14,57 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { type EventKind } from '../../lib/mockData';
 import { createEventFromInput } from '../../lib/eventStore';
+
+/**
+ * Cross-platform date input. On the web (FamLink is a PWA), drop in a real
+ * HTML `<input type="date">` so iOS Safari and Android Chrome render their
+ * native date pickers — wheel on iOS, calendar dropdown on Android/desktop.
+ * React Native's TextInput won't pass `type` through to the underlying input
+ * on react-native-web, so we use React.createElement to render the DOM node
+ * directly. On native (rare for FamLink right now, but kept for parity) we
+ * fall back to a plain TextInput; a real native date picker can layer on
+ * later via @react-native-community/datetimepicker.
+ */
+function DateInput({
+  value,
+  onChange,
+  placeholder,
+  min,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+  min?: string;
+}) {
+  if (Platform.OS === 'web') {
+    return createElement('input', {
+      type: 'date',
+      value: value || '',
+      min: min || undefined,
+      onChange: (e: { target: { value: string } }) => onChange(e.target.value),
+      style: {
+        fontSize: 15,
+        color: tokens.color.textPrimary,
+        backgroundColor: 'transparent',
+        border: 'none',
+        outline: 'none',
+        padding: 0,
+        width: '100%',
+        fontFamily: 'inherit',
+      },
+    });
+  }
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      placeholderTextColor={tokens.color.textMuted}
+      style={{ fontSize: 15, color: tokens.color.textPrimary }}
+      autoCapitalize="none"
+    />
+  );
+}
 
 const KIND_OPTIONS: { id: EventKind; label: string; glyph: string; tint: string }[] = [
   { id: 'reunion', label: 'Family reunion', glyph: '🌾', tint: '#E8B274' },
@@ -166,26 +217,22 @@ export default function NewEvent() {
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <Field label="STARTS (YYYY-MM-DD)">
-              <TextInput
+            <Field label="STARTS">
+              <DateInput
                 value={startsAt}
-                onChangeText={setStartsAt}
-                placeholder="2026-07-17"
-                placeholderTextColor={tokens.color.textMuted}
-                style={{ fontSize: 15, color: tokens.color.textPrimary }}
-                autoCapitalize="none"
+                onChange={setStartsAt}
+                placeholder="YYYY-MM-DD"
               />
             </Field>
           </View>
           <View style={{ flex: 1 }}>
-            <Field label="ENDS (YYYY-MM-DD)">
-              <TextInput
+            <Field label="ENDS">
+              <DateInput
                 value={endsAt}
-                onChangeText={setEndsAt}
-                placeholder="2026-07-20"
-                placeholderTextColor={tokens.color.textMuted}
-                style={{ fontSize: 15, color: tokens.color.textPrimary }}
-                autoCapitalize="none"
+                onChange={setEndsAt}
+                placeholder="YYYY-MM-DD"
+                // Don't let the user pick an end date earlier than the start.
+                min={startsAt || undefined}
               />
             </Field>
           </View>
