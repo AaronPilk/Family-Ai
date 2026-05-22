@@ -78,7 +78,7 @@ export default function OnboardingHowItWorks() {
         }}
       >
         <PrimaryButton label="Next" onPress={() => router.replace('/onboarding/role')} />
-        <OnboardingDots step={2} total={5} />
+        <OnboardingDots step={2} total={6} />
       </View>
     </View>
   );

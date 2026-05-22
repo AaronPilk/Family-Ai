@@ -24,7 +24,7 @@ export default function OnboardingInviteOrSkip() {
 
   async function handleInvite() {
     setBusy('invite');
-    router.replace('/onboarding/install');
+    router.replace('/onboarding/support');
     // Then push the invite screen on top so the user can fire SMS/email
     // first; back button returns them to the install step.
     router.push('/invite');
@@ -33,7 +33,7 @@ export default function OnboardingInviteOrSkip() {
 
   async function handleSkip() {
     setBusy('skip');
-    router.replace('/onboarding/install');
+    router.replace('/onboarding/support');
     setBusy(null);
   }
 
@@ -124,7 +124,7 @@ export default function OnboardingInviteOrSkip() {
           disabled={busy !== null}
         />
         <SecondaryLink label="Skip for now" onPress={handleSkip} />
-        <OnboardingDots step={4} total={5} />
+        <OnboardingDots step={4} total={6} />
       </View>
     </View>
   );

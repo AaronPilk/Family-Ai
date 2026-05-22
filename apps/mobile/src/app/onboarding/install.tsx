@@ -147,7 +147,7 @@ export default function OnboardingInstall() {
           disabled={busy !== null}
         />
         <SecondaryLink label="Skip for now" onPress={handleSkip} />
-        <OnboardingDots step={5} total={5} />
+        <OnboardingDots step={6} total={6} />
       </View>
     </View>
   );

@@ -273,7 +273,7 @@ export default function OnboardingRole() {
           disabled={!selected}
           loading={saving}
         />
-        <OnboardingDots step={3} total={5} />
+        <OnboardingDots step={3} total={6} />
       </View>
     </View>
   );
