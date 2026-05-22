@@ -102,7 +102,7 @@ export default function OnboardingWelcome() {
           label="Continue"
           onPress={() => router.replace('/onboarding/how-it-works')}
         />
-        <OnboardingDots step={1} total={4} />
+        <OnboardingDots step={1} total={5} />
       </View>
     </View>
   );

@@ -1,53 +1,40 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { OnboardingDots, PrimaryButton, SecondaryLink } from './_shared';
-import { useMyUserId } from '../../lib/sessionStore';
-import { updateProfile } from '../../lib/useProfile';
 
 /**
- * Onboarding step 4 of 4 — Invite (or skip).
+ * Onboarding step 4 of 5 — Invite (or skip).
  *
- * Both paths flip profiles.onboarding_completed = true, so the root gate
- * stops routing the user here. The previous version of this screen tried to
- * collect a multi-row invite list inline; we've split that out to the
- * standalone /invite screen (which has more room for the SMS/email flow
- * the Twilio agent is wiring up) and made this a single CTA.
+ * Both buttons route to /onboarding/install, which is the new final step.
+ * The `onboarding_completed = true` flip used to live here; it moved to the
+ * install screen so the gate doesn't bypass install coaching.
+ *
+ * "Invite your family" pushes /invite (the real SMS/email screen) and we
+ * trust the user to use the back button to return to the install step.
+ * The install screen is also reachable directly via /onboarding/install if
+ * the user manages to land at a tab without it (the root gate handles that
+ * via onboarding_completed).
  */
 export default function OnboardingInviteOrSkip() {
   const insets = useSafeAreaInsets();
-  const userId = useMyUserId();
   const [busy, setBusy] = useState<null | 'invite' | 'skip'>(null);
-
-  async function finishOnboarding(): Promise<boolean> {
-    if (!userId) return true;
-    try {
-      await updateProfile(userId, { onboardingCompleted: true });
-      return true;
-    } catch (e) {
-      Alert.alert(
-        "Couldn't finish setup",
-        "We'll show you onboarding again next time you open the app. " +
-          (e instanceof Error ? e.message : ''),
-      );
-      return false;
-    }
-  }
 
   async function handleInvite() {
     setBusy('invite');
-    await finishOnboarding();
+    router.replace('/onboarding/install');
+    // Then push the invite screen on top so the user can fire SMS/email
+    // first; back button returns them to the install step.
+    router.push('/invite');
     setBusy(null);
-    router.replace('/invite');
   }
 
   async function handleSkip() {
     setBusy('skip');
-    await finishOnboarding();
+    router.replace('/onboarding/install');
     setBusy(null);
-    router.replace('/(tabs)');
   }
 
   return (
@@ -137,7 +124,7 @@ export default function OnboardingInviteOrSkip() {
           disabled={busy !== null}
         />
         <SecondaryLink label="Skip for now" onPress={handleSkip} />
-        <OnboardingDots step={4} total={4} />
+        <OnboardingDots step={4} total={5} />
       </View>
     </View>
   );

@@ -9,6 +9,7 @@ import { useColorScheme, View } from 'react-native';
 import tamaguiConfig from '../../tamagui.config';
 import { tokens } from '../theme/tokens';
 import { initSession } from '../lib/sessionStore';
+import { PushPermissionModal } from '../components/PushPermissionModal';
 
 // Boot the auth subscription once before any screen renders.
 initSession();
@@ -44,6 +45,13 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: tokens.color.bgSecondary },
               }}
             />
+            {/*
+              Soft-ask for web push permission. Self-gates: renders nothing
+              on native, nothing when signed out, nothing outside standalone
+              PWA mode, nothing if permission isn't 'default', and nothing
+              within 7 days of a "Maybe later" dismissal.
+            */}
+            <PushPermissionModal />
           </View>
         </TamaguiProvider>
       </SafeAreaProvider>

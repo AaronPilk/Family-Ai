@@ -58,6 +58,29 @@ export default function Root({ children }: PropsWithChildren) {
           and web. Required by expo-router for web. Don't remove.
         */}
         <ScrollViewStyleReset />
+
+        {/*
+          Service worker registration for web push.
+          ----------------------------------------
+          We register /sw.js at site root scope so it can receive push events
+          while the app isn't open. The SW only handles `push` and
+          `notificationclick` — it does NOT cache responses (see sw.js for why).
+          Inline so it runs on the very first paint, before any RN renders.
+        */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                  navigator.serviceWorker
+                    .register('/sw.js')
+                    .catch(function (e) { console.warn('[sw] failed', e); });
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>
