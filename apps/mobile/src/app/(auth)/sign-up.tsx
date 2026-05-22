@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import {
   View,
@@ -13,6 +13,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { supabase } from '../../lib/supabase';
+import {
+  clearPendingInviteToken,
+  getPendingInviteToken,
+  getPendingInviteTokenSync,
+} from '../../lib/pendingInvite';
 
 /**
  * Sign-up. Creates the auth.users row via supabase.auth.signUp; the public
@@ -28,6 +33,44 @@ export default function SignUp() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmSent, setConfirmSent] = useState(false);
+  // Pending invite token (set on /join/<token> when signed out). Drives the
+  // "Sign up to join your family" copy and the post-signup claim flow.
+  const [hasPendingInvite, setHasPendingInvite] = useState<boolean>(
+    () => !!getPendingInviteTokenSync(),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    getPendingInviteToken().then((t) => {
+      if (!cancelled) setHasPendingInvite(!!t);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Best-effort claim after sign-up succeeds and a session is in hand.
+  async function claimPendingInviteIfAny(): Promise<{ circleName: string | null } | null> {
+    const token = await getPendingInviteToken();
+    if (!token) return null;
+    try {
+      const { data, error: claimErr } = await supabase.rpc('claim_family_invite', {
+        _token: token,
+      });
+      if (claimErr) {
+        // eslint-disable-next-line no-console
+        console.warn('[sign-up] claim_family_invite failed:', claimErr.message);
+        return null;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      await clearPendingInviteToken();
+      return { circleName: (row?.circle_name as string | undefined) ?? null };
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[sign-up] claim threw:', e);
+      return null;
+    }
+  }
 
   const passwordTooShort = password.length > 0 && password.length < 8;
   const passwordMismatch = confirm.length > 0 && confirm !== password;
@@ -56,7 +99,13 @@ export default function SignUp() {
     //  - email confirmation ON → data.session is null, user must verify email
     //  - email confirmation OFF → data.session is populated, route into onboarding
     if (data.session) {
-      router.replace('/onboarding/name');
+      // If they got here from /join/<token>, attempt the claim before routing.
+      const claimed = await claimPendingInviteIfAny();
+      if (claimed) {
+        router.replace('/(tabs)/family');
+      } else {
+        router.replace('/onboarding/name');
+      }
     } else {
       setConfirmSent(true);
     }
@@ -95,7 +144,8 @@ export default function SignUp() {
           }}
         >
           We sent a confirmation link to {email.trim()}. Tap it on this device to finish setting up
-          your FamLink account.
+          your FamLink account
+          {hasPendingInvite ? ' and join your family.' : '.'}
         </Text>
         <View style={{ flex: 1 }} />
         <Pressable
@@ -143,6 +193,32 @@ export default function SignUp() {
         </Pressable>
 
         <View>
+          {hasPendingInvite && (
+            <View
+              style={{
+                backgroundColor: tokens.color.accentPrimary + '15',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: tokens.color.accentPrimary,
+                  letterSpacing: 0.6,
+                  marginBottom: 2,
+                }}
+              >
+                FAMILY INVITE
+              </Text>
+              <Text style={{ fontSize: 13, color: tokens.color.textPrimary, lineHeight: 18 }}>
+                You've been invited to join a family on FamLink. Sign up to come on in.
+              </Text>
+            </View>
+          )}
           <Text
             style={{
               fontSize: 28,
@@ -151,7 +227,7 @@ export default function SignUp() {
               marginBottom: 8,
             }}
           >
-            Create your FamLink
+            {hasPendingInvite ? 'Sign up to join your family' : 'Create your FamLink'}
           </Text>
           <Text
             style={{
@@ -160,7 +236,9 @@ export default function SignUp() {
               lineHeight: 24,
             }}
           >
-            Start with an email and password. We'll set up your family next.
+            {hasPendingInvite
+              ? "Just an email and password. We'll drop you straight into the family chat after."
+              : "Start with an email and password. We'll set up your family next."}
           </Text>
         </View>
 

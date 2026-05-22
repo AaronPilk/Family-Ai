@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, View, Text, Pressable, TextInput } from 'react-native';
 import { comingSoon } from '../../lib/comingSoon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -116,7 +116,7 @@ export default function AskScreen() {
               live forever in your timeline and theirs.
             </Text>
             <Pressable
-              onPress={() => comingSoon('invite')}
+              onPress={() => router.push('/invite')}
               style={({ pressed }) => ({
                 alignSelf: 'flex-start',
                 marginTop: 6,

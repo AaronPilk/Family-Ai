@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { MEMBERS, type MemberId } from '../../lib/mockData';
 import { Avatar } from '../../components/Avatar';
+import { DemoBanner } from '../../components/DemoBanner';
 
 interface Notif {
   id: string;
@@ -116,6 +117,10 @@ export default function Notifications() {
           </Text>
         </View>
       </View>
+
+      <DemoBanner
+        message="This is what notifications will look like when you have family using FamLink. Real notifications come from real activity."
+      />
 
       <ScrollView
         contentContainerStyle={{

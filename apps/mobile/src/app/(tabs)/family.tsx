@@ -84,6 +84,47 @@ export default function FamilyScreen() {
           </Text>
         </View>
 
+        {/* Invite via link — the easiest way to onboard real family fast. */}
+        <Pressable
+          onPress={() => router.push('/invite')}
+          style={({ pressed }) => ({
+            backgroundColor: tokens.color.accentPrimary,
+            borderRadius: 16,
+            paddingHorizontal: 18,
+            paddingVertical: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            opacity: pressed ? 0.85 : 1,
+            shadowColor: tokens.color.accentPrimary,
+            shadowOpacity: 0.18,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+          })}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>🔗</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: 'white' }}>
+              Invite via link
+            </Text>
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
+              Drop one link in your family group chat. Anyone who taps it joins.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 22, color: 'white' }}>›</Text>
+        </Pressable>
+
         {/* Branch list — only when 2+ */}
         {isMulti && (
           <Section title="Your branches">
