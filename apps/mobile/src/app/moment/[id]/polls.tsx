@@ -7,7 +7,6 @@ import { useEvent, useEventStore } from '../../../lib/eventStore';
 import { useMyUserId } from '../../../lib/sessionStore';
 import { userIdToMemberId } from '../../../lib/supabaseEvents';
 import { Avatar } from '../../../components/Avatar';
-import { comingSoon } from '../../../lib/comingSoon';
 
 export default function EventPolls() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -75,8 +74,13 @@ export default function EventPolls() {
           </View>
         )}
 
+        {/* Routes to /moment/[id]/new-poll. The poll-read path on this screen
+            still uses event.polls from the in-memory store; until the read
+            side is rewired to event_polls / event_poll_options the user
+            posts a poll, sees it via the polls table, but needs the screen
+            cleanup to see it render here. */}
         <Pressable
-          onPress={() => comingSoon('add_poll')}
+          onPress={() => router.push(`/moment/${id}/new-poll`)}
           style={({ pressed }) => ({
             alignSelf: 'flex-start',
             paddingHorizontal: 16,
