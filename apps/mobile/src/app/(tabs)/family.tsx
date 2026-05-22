@@ -333,7 +333,10 @@ export default function FamilyScreen() {
                 <UpcomingEventRow key={e.id} event={e} />
               ))}
               <Pressable
-                onPress={() => router.push('/events')}
+                // Was '/events' — that route doesn't exist (events live in
+                // the tabs group). Pushing the literal '/events' blank-
+                // screened the app when the user tapped this card.
+                onPress={() => router.push('/(tabs)/events')}
                 style={({ pressed }) => ({
                   alignSelf: 'flex-start',
                   paddingHorizontal: 14,

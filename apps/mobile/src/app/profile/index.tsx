@@ -224,7 +224,10 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/welcome');
+          // Was '/welcome' — that route doesn't exist and blank-screens the
+          // app on sign-out. The real public welcome screen lives at
+          // /(auth)/welcome behind the (auth) layout group.
+          router.replace('/(auth)/welcome');
         },
       },
     ]);
