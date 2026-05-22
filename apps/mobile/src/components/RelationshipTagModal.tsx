@@ -16,6 +16,7 @@ import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { tokens } from '../theme/tokens';
 import {
   RELATIONSHIP_LABELS,
+  relationshipLabelFor,
   tagRelationship,
   type FamilyMember,
   type RelationshipType,
@@ -186,7 +187,7 @@ export function RelationshipTagModal({
                             : tokens.color.textPrimary,
                         }}
                       >
-                        {r.label}
+                        {relationshipLabelFor(r.type, member?.gender ?? null)}
                       </Text>
                     </Pressable>
                   );

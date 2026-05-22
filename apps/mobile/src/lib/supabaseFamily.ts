@@ -26,6 +26,7 @@ export interface FamilyMember {
   isImmediate: boolean;
   invitedViaUserId: string | null;
   relationshipType: string | null; // label the viewer has tagged on them
+  gender: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null;
 }
 
 export interface FamilyBranch {
@@ -157,16 +158,51 @@ export async function fetchMyFamily(): Promise<FamilyGraph> {
 
   const { data: profRows, error: profErr } = await supabase
     .from('profiles')
-    .select('user_id, display_name')
+    .select('user_id, display_name, gender')
     .in('user_id', idList);
 
   if (profErr) {
     // eslint-disable-next-line no-console
     console.warn('[supabaseFamily] profile lookup failed:', profErr.message);
   }
+
+  // Also pull email so we can derive a fallback display name when a member
+  // hasn't filled in their profile yet (e.g. invited brother who only
+  // confirmed his email and hasn't completed onboarding).
+  const { data: userRows, error: userErr } = await supabase
+    .from('users')
+    .select('id, email')
+    .in('id', idList);
+  if (userErr) {
+    // eslint-disable-next-line no-console
+    console.warn('[supabaseFamily] users lookup failed:', userErr.message);
+  }
+  const emailMap = new Map<string, string>();
+  for (const u of userRows ?? []) {
+    if (u.email) emailMap.set(u.id as string, u.email as string);
+  }
+
+  /** Best-effort display name: profile name → email username → "Family member". */
+  function nameFor(userId: string): string {
+    const profile = (profRows ?? []).find((p) => p.user_id === userId);
+    const dn = (profile?.display_name as string | undefined)?.trim();
+    if (dn) return dn;
+    const email = emailMap.get(userId);
+    if (email) {
+      // Capitalize the first letter of the email username so "tylerpilk8" →
+      // "Tylerpilk8" instead of staying lowercase.
+      const local = email.split('@')[0] ?? '';
+      if (local) return local.charAt(0).toUpperCase() + local.slice(1);
+    }
+    return 'Family member';
+  }
+
   const nameMap = new Map<string, string>();
-  for (const p of profRows ?? []) {
-    nameMap.set(p.user_id as string, (p.display_name as string) || 'Family member');
+  const genderMap = new Map<string, FamilyMember['gender']>();
+  for (const userId of idList) {
+    nameMap.set(userId, nameFor(userId));
+    const profile = (profRows ?? []).find((p) => p.user_id === userId);
+    genderMap.set(userId, (profile?.gender as FamilyMember['gender']) ?? null);
   }
 
   // 3. Relationships the caller has already tagged on members in this circle.
@@ -196,6 +232,7 @@ export async function fetchMyFamily(): Promise<FamilyGraph> {
       isImmediate: r.is_immediate,
       invitedViaUserId: r.invited_via_user_id,
       relationshipType: relMap.get(r.user_id) ?? null,
+      gender: genderMap.get(r.user_id) ?? null,
     };
   });
 
@@ -302,9 +339,50 @@ export async function tagRelationship(
     );
   }
   // RPC returns a TABLE — Supabase wraps it in an array.
+  // After migration 20260522000019 the out columns are prefixed `out_` to
+  // avoid SQL-side column-name shadowing; fall back to the old unprefixed
+  // names so this still works mid-deploy.
   const row = Array.isArray(data) ? data[0] : data;
   return {
-    circleId: row?.circle_id as string,
-    isImmediate: !!row?.is_immediate,
+    circleId: (row?.out_circle_id ?? row?.circle_id) as string,
+    isImmediate: !!(row?.out_is_immediate ?? row?.is_immediate),
   };
+}
+
+/**
+ * Gender-aware label for a relationship type. When we know the target's
+ * gender, prefer the gendered form ("Brother" not "Sibling", "Mom" not
+ * "Parent"). Falls back to the neutral label when gender is unknown or
+ * the relationship doesn't have a clean gendered form.
+ */
+export function relationshipLabelFor(
+  type: RelationshipType,
+  targetGender: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null | undefined,
+): string {
+  if (targetGender === 'female') {
+    switch (type) {
+      case 'parent':       return 'Mom';
+      case 'child':        return 'Daughter';
+      case 'sibling':      return 'Sister';
+      case 'grandparent':  return 'Grandma';
+      case 'grandchild':   return 'Granddaughter';
+      case 'aunt_uncle':   return 'Aunt';
+      case 'niece_nephew': return 'Niece';
+      default: break;
+    }
+  } else if (targetGender === 'male') {
+    switch (type) {
+      case 'parent':       return 'Dad';
+      case 'child':        return 'Son';
+      case 'sibling':      return 'Brother';
+      case 'grandparent':  return 'Grandpa';
+      case 'grandchild':   return 'Grandson';
+      case 'aunt_uncle':   return 'Uncle';
+      case 'niece_nephew': return 'Nephew';
+      default: break;
+    }
+  }
+  // Fallback — neutral label from RELATIONSHIP_LABELS
+  const entry = RELATIONSHIP_LABELS.find((r) => r.type === type);
+  return entry?.label ?? type;
 }
