@@ -378,6 +378,36 @@ export default function FamilyScreen() {
                 The people you build long-term memory with — parents, siblings, spouse,
                 grandparents. Default audience for Vault releases and Letters.
               </Text>
+              {/* View family tree — generational layout. Quiet link tucked
+                  right above the avatar row. */}
+              <Pressable
+                onPress={() => router.push('/family/tree')}
+                accessibilityRole="button"
+                accessibilityLabel="View family tree"
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-start',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: tokens.color.bgTinted,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ fontSize: 13 }}>🌳</Text>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: tokens.color.accentPrimary,
+                  }}
+                >
+                  View family tree
+                </Text>
+                <Text style={{ fontSize: 14, color: tokens.color.accentPrimary }}>›</Text>
+              </Pressable>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
