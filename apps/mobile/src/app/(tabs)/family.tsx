@@ -461,22 +461,36 @@ export default function FamilyScreen() {
                 </>
               )}
               {immediateIds.length === 0 && otherCoreIds.length === 0 && (
-                <View
-                  style={{
+                <Pressable
+                  onPress={() => router.push('/invite')}
+                  style={({ pressed }) => ({
                     backgroundColor: tokens.color.bgTinted,
                     borderRadius: 14,
                     padding: 14,
                     gap: 6,
-                  }}
+                    borderWidth: 1,
+                    borderColor: tokens.color.accentPrimary + '30',
+                    opacity: pressed ? 0.7 : 1,
+                  })}
                 >
                   <Text style={{ fontSize: 14, fontWeight: '700', color: tokens.color.textPrimary }}>
-                    Add immediate family — coming next
+                    Build your immediate family
                   </Text>
                   <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
-                    For now, invite people through an event (reunion, vacation, gathering) on the
-                    Events tab. The "add to family tree" flow lands in the next update.
+                    Share your invite link with mom, dad, siblings, or grandparents. When they
+                    join, you'll tag who they are and they'll move into this circle.
                   </Text>
-                </View>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: tokens.color.accentPrimary,
+                      fontWeight: '700',
+                      marginTop: 4,
+                    }}
+                  >
+                    Invite via link →
+                  </Text>
+                </Pressable>
               )}
             </Section>
 
