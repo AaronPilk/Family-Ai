@@ -35,6 +35,7 @@ import { BranchSwitcher } from '../../components/BranchSwitcher';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { comingSoon } from '../../lib/comingSoon';
 import { useHasFamily } from '../../lib/useHasFamily';
+import { showDemoAlert } from '../../lib/demoGuard';
 import {
   DEMO_TODAY_PROMPT,
   DEMO_INBOX,
@@ -595,9 +596,16 @@ function Section({
 
 function UpcomingEventHero({ event, days }: { event: FamilyEvent; days: number }) {
   const going = rsvpCount(event, 'going');
+  const isDemo = event.id.startsWith('demo_');
   return (
     <Pressable
-      onPress={() => router.push(`/moment/${event.id}`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('event');
+          return;
+        }
+        router.push(`/moment/${event.id}`);
+      }}
       style={({ pressed }) => ({
         backgroundColor: event.coverTint,
         borderRadius: 22,
@@ -673,9 +681,16 @@ function UpcomingEventHero({ event, days }: { event: FamilyEvent; days: number }
 
 function EventMiniCard({ event }: { event: FamilyEvent }) {
   const days = daysUntil(event.startsAt);
+  const isDemo = event.id.startsWith('demo_');
   return (
     <Pressable
-      onPress={() => router.push(`/moment/${event.id}`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('event');
+          return;
+        }
+        router.push(`/moment/${event.id}`);
+      }}
       style={({ pressed }) => ({
         width: 220,
         backgroundColor: tokens.color.bgPrimary,
@@ -729,9 +744,16 @@ function EventMiniCard({ event }: { event: FamilyEvent }) {
 
 function RecentRow({ item }: { item: FeedItem }) {
   const author = MEMBERS[item.authorId];
+  const isDemo = String(item.authorId).startsWith('demo_');
   return (
     <Pressable
-      onPress={() => router.push(`/member/${item.authorId}`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('member');
+          return;
+        }
+        router.push(`/member/${item.authorId}`);
+      }}
       style={({ pressed }) => ({
         backgroundColor: tokens.color.bgPrimary,
         padding: 14,

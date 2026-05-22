@@ -7,6 +7,7 @@ import { useAllEvents, useHydrateEventsFromSupabase } from '../../lib/eventStore
 import { useHasFamily } from '../../lib/useHasFamily';
 import { eventsFromDemo } from '../../lib/demoData';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
+import { showDemoAlert } from '../../lib/demoGuard';
 
 /**
  * Events tab — the second-mode home. Reunions, vacations, holidays.
@@ -215,9 +216,17 @@ function EventCard({
   const days = daysUntil(event.startsAt);
   const isHappening = event.status === 'happening' || (days <= 0 && days >= -7);
 
+  const isDemo = event.id.startsWith('demo_');
+
   return (
     <Pressable
-      onPress={() => router.push(`/moment/${event.id}`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('event');
+          return;
+        }
+        router.push(`/moment/${event.id}`);
+      }}
       style={({ pressed }) => ({
         backgroundColor: tokens.color.bgPrimary,
         borderRadius: 18,

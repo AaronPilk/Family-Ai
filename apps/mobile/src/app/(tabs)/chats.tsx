@@ -16,6 +16,7 @@ import { useScopedBranchIds } from '../../lib/branchStore';
 import { useHasFamily } from '../../lib/useHasFamily';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { eventsFromDemo, demoMemberDisplay } from '../../lib/demoData';
+import { showDemoAlert } from '../../lib/demoGuard';
 
 /**
  * Chats tab — every active group chat in one place. For v0 each row is an
@@ -141,9 +142,17 @@ function ChatRow({ event, last }: { event: FamilyEvent; last: boolean }) {
   const preview = latest ? messagePreview(latest) : null;
   const others = event.activity.filter((m) => m.authorId !== ME).length;
 
+  const isDemo = event.id.startsWith('demo_');
+
   return (
     <Pressable
-      onPress={() => router.push(`/moment/${event.id}/chat`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('chat');
+          return;
+        }
+        router.push(`/moment/${event.id}/chat`);
+      }}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',

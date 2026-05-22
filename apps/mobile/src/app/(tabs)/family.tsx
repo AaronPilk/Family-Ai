@@ -39,6 +39,7 @@ import {
   type FamilyMember,
 } from '../../lib/supabaseFamily';
 import { RelationshipTagModal } from '../../components/RelationshipTagModal';
+import { showDemoAlert } from '../../lib/demoGuard';
 
 export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
@@ -1202,7 +1203,13 @@ function MemberRow({
 function ExtendedMemberRowInline({ member: m, demo }: { member: ExtendedMember; demo?: boolean }) {
   return (
     <Pressable
-      onPress={() => !demo && comingSoon('extended_member_profile')}
+      onPress={() => {
+        if (demo) {
+          showDemoAlert('member');
+          return;
+        }
+        comingSoon('extended_member_profile');
+      }}
       style={({ pressed }) => ({
         backgroundColor: tokens.color.bgPrimary,
         borderRadius: 14,
@@ -1299,9 +1306,16 @@ function ExtendedMemberRow({ memberId }: { memberId: ExtendedMemberId }) {
 
 function UpcomingEventRow({ event }: { event: FamilyEvent }) {
   const days = daysUntil(event.startsAt);
+  const isDemo = event.id.startsWith('demo_');
   return (
     <Pressable
-      onPress={() => router.push(`/moment/${event.id}`)}
+      onPress={() => {
+        if (isDemo) {
+          showDemoAlert('event');
+          return;
+        }
+        router.push(`/moment/${event.id}`);
+      }}
       style={({ pressed }) => ({
         backgroundColor: tokens.color.bgPrimary,
         borderRadius: 16,

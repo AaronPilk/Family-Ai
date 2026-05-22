@@ -8,6 +8,7 @@ import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { useHasFamily } from '../../lib/useHasFamily';
 import { DEMO_NOTIFICATIONS, DEMO_PEOPLE_LIST } from '../../lib/demoData';
 import { getMyLastName } from '../../lib/useProfile';
+import { showDemoAlert } from '../../lib/demoGuard';
 
 interface Notif {
   id: string;
@@ -148,10 +149,17 @@ export default function Notifications() {
                   color: demoN._demoFromColor ?? tokens.color.accentPrimary,
                 }
               : null;
+          const isDemoNotif = n.id.startsWith('demo_');
           return (
             <Pressable
               key={n.id}
-              onPress={() => n.goTo && router.push(n.goTo as never)}
+              onPress={() => {
+                if (isDemoNotif) {
+                  showDemoAlert('notification');
+                  return;
+                }
+                if (n.goTo) router.push(n.goTo as never);
+              }}
               style={({ pressed }) => ({
                 padding: 14,
                 backgroundColor: n.unread ? tokens.color.bgTinted : tokens.color.bgPrimary,
