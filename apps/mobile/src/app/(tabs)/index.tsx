@@ -147,8 +147,11 @@ export default function HomeScreen() {
                   primary
                   onPress={() => comingSoon('record_voice')}
                 />
-                <PromptAction label="✍️  Type" onPress={() => comingSoon('today_prompt')} />
-                <PromptAction label="↷ Skip" onPress={() => comingSoon('skip_prompt')} />
+                <PromptAction
+                  label="✍️  Answer"
+                  onPress={() => router.push('/answer/today')}
+                />
+                <PromptAction label="More →" onPress={() => router.push('/answer/today')} />
               </View>
               <Text style={{ marginTop: 16, color: '#FFD8E0', fontSize: 13 }}>
                 When you answer, it lives in three places: your timeline, the family book, and the

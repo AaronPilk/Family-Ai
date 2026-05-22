@@ -10,9 +10,21 @@ import {
   useIsMultiBranch,
   useScopedBranchIds,
   useSelection,
+  useUserRole,
 } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 import { BranchSwitcher } from '../../components/BranchSwitcher';
+
+/**
+ * The Ask tab is now two surfaces in one. Younger users (children,
+ * grandchildren) see the existing Ask flow — pick someone, type a question.
+ * Elders (parents, grandparents) see a quick-entry into the Answer surface
+ * because they're the ones with stories to tell. We expose a segmented
+ * control at the top so anyone — regardless of their role flag — can
+ * cross over and contribute to the family memory. The default is chosen
+ * by `useUserRole()`; the user can override per-session.
+ */
+type Mode = 'ask' | 'answer';
 
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
@@ -20,7 +32,13 @@ export default function AskScreen() {
   const sel = useSelection();
   const isMulti = useIsMultiBranch();
   const scopedIds = useScopedBranchIds();
-  const params = useLocalSearchParams<{ preselect?: MemberId }>();
+  const params = useLocalSearchParams<{ preselect?: MemberId; mode?: Mode }>();
+  const userRole = useUserRole();
+  // Default the surface to "answer" for elders, "ask" for everyone else.
+  // The user can toggle either way per-session via the segmented control.
+  const [mode, setMode] = useState<Mode>(
+    params.mode ?? (userRole === 'elder' ? 'answer' : 'ask'),
+  );
 
   // Members across all in-scope branches (deduped, excluding 'me'). With the
   // mock-data exports emptied, MEMBERS entries for non-'me' ids carry blank
@@ -78,7 +96,7 @@ export default function AskScreen() {
         <View style={{ gap: 10 }}>
           <BranchSwitcher />
           <Text style={{ fontSize: 28, fontWeight: '700', color: tokens.color.textPrimary }}>
-            Ask
+            {mode === 'answer' ? 'Answer' : 'Ask'}
           </Text>
           <Text
             style={{
@@ -87,18 +105,121 @@ export default function AskScreen() {
               lineHeight: 22,
             }}
           >
-            Pick someone{' '}
-            {isMulti
-              ? sel === 'all'
-                ? 'across your family'
-                : `in ${branch.shortName}`
-              : 'in your family'}{' '}
-            and ask them anything. They'll get a gentle nudge.
+            {mode === 'answer'
+              ? 'Share a memory with your family. One question at a time.'
+              : `Pick someone ${
+                  isMulti
+                    ? sel === 'all'
+                      ? 'across your family'
+                      : `in ${branch.shortName}`
+                    : 'in your family'
+                } and ask them anything. They'll get a gentle nudge.`}
           </Text>
         </View>
 
+        {/* Mode segmented control */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: tokens.color.bgTinted,
+            borderRadius: 14,
+            padding: 4,
+          }}
+        >
+          {(['answer', 'ask'] as Mode[]).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                alignItems: 'center',
+                backgroundColor: mode === m ? tokens.color.bgPrimary : 'transparent',
+                borderRadius: 10,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: mode === m ? tokens.color.textPrimary : tokens.color.textMuted,
+                }}
+              >
+                {m === 'answer' ? 'Answer questions' : 'Ask family'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Answer mode — quick launcher into the full answering surface */}
+        {mode === 'answer' && (
+          <View style={{ gap: 14 }}>
+            <Pressable
+              onPress={() => router.push('/answer/today')}
+              style={({ pressed }) => ({
+                backgroundColor: tokens.color.accentPrimary,
+                borderRadius: 24,
+                padding: 22,
+                opacity: pressed ? 0.9 : 1,
+                shadowColor: tokens.color.accentPrimary,
+                shadowOpacity: 0.25,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 8 },
+              })}
+            >
+              <Text
+                style={{
+                  color: '#FFD8E0',
+                  fontSize: 12,
+                  fontWeight: '700',
+                  letterSpacing: 1.5,
+                }}
+              >
+                READY WHEN YOU ARE
+              </Text>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 22,
+                  fontWeight: '700',
+                  lineHeight: 30,
+                  marginTop: 8,
+                }}
+              >
+                Answer your next question
+              </Text>
+              <Text style={{ marginTop: 10, color: '#FFD8E0', fontSize: 14, lineHeight: 20 }}>
+                Tap in — we'll show you one good question. Type a few sentences
+                and it'll live in your family's story forever.
+              </Text>
+              <View
+                style={{
+                  marginTop: 16,
+                  alignSelf: 'flex-start',
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 999,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '700' }}>Open →</Text>
+              </View>
+            </Pressable>
+            <Text style={{ fontSize: 13, color: tokens.color.textMuted, lineHeight: 18 }}>
+              Want to ask someone else a question instead? Switch to{' '}
+              <Text
+                onPress={() => setMode('ask')}
+                style={{ color: tokens.color.accentPrimary, fontWeight: '700' }}
+              >
+                Ask family
+              </Text>
+              .
+            </Text>
+          </View>
+        )}
+
         {/* Empty state when there's no one to ask yet */}
-        {branchMembers.length === 0 && (
+        {mode === 'ask' && branchMembers.length === 0 && (
           <View
             style={{
               backgroundColor: tokens.color.bgTinted,
@@ -133,7 +254,7 @@ export default function AskScreen() {
         )}
 
         {/* Recipient picker */}
-        {branchMembers.length > 0 && (
+        {mode === 'ask' && branchMembers.length > 0 && (
         <Section title="Who do you want to ask?">
           <ScrollView
             horizontal
@@ -167,7 +288,7 @@ export default function AskScreen() {
         )}
 
         {/* Composer */}
-        {branchMembers.length > 0 && selected && (
+        {mode === 'ask' && branchMembers.length > 0 && selected && (
           <View
             style={{
               backgroundColor: tokens.color.bgPrimary,
@@ -234,7 +355,7 @@ export default function AskScreen() {
         )}
 
         {/* Suggested — only render when there's something to suggest */}
-        {suggested.length > 0 && (
+        {mode === 'ask' && suggested.length > 0 && (
         <Section title="Suggested questions">
           <View style={{ gap: 10 }}>
             {suggested.map((s, i) => (
