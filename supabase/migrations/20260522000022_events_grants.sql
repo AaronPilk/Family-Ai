@@ -32,6 +32,8 @@ grant insert, update, delete on public.event_polls        to authenticated;
 grant insert, update, delete on public.event_poll_options to authenticated;
 grant insert, update, delete on public.event_poll_votes   to authenticated;
 grant insert, update, delete on public.event_messages     to authenticated;
+grant insert, update, delete on public.event_media        to authenticated;
+grant insert, update, delete on public.event_highlights   to authenticated;
 
 -- rollback
 -- revoke insert, update, delete on public.events             from authenticated;
@@ -42,3 +44,5 @@ grant insert, update, delete on public.event_messages     to authenticated;
 -- revoke insert, update, delete on public.event_poll_options from authenticated;
 -- revoke insert, update, delete on public.event_poll_votes   from authenticated;
 -- revoke insert, update, delete on public.event_messages     from authenticated;
+-- revoke insert, update, delete on public.event_media        from authenticated;
+-- revoke insert, update, delete on public.event_highlights   from authenticated;

@@ -680,3 +680,118 @@ export async function inviteEmailToEvent(
   });
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Create a poll on an event with N options.
+ *
+ * Inserts one event_polls row + N event_poll_options rows in sequence.
+ * If the options insert fails we leave the (parent) poll behind — the
+ * polls screen will just show a poll with no options, which is recoverable
+ * via deletion. This keeps the helper simple; if we ever need atomicity
+ * across both tables we'll move it into a SECURITY DEFINER function.
+ *
+ * `kind` defaults to 'custom' since the new-poll screen is freeform; the
+ * existing 'date' / 'location' / 'activity' kinds in the schema are for
+ * future templated quick-polls.
+ */
+export async function createEventPoll(
+  eventId: string,
+  prompt: string,
+  options: string[],
+  kind: 'date' | 'location' | 'activity' | 'custom' = 'custom',
+): Promise<{ pollId: string }> {
+  const trimmedPrompt = prompt.trim();
+  if (!trimmedPrompt) throw new Error('Give your poll a question.');
+  const cleanOptions = options
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+  if (cleanOptions.length < 2) {
+    throw new Error('Add at least two options to vote between.');
+  }
+
+  const { data: session } = await supabase.auth.getUser();
+  const myUuid = session.user?.id;
+  if (!myUuid) throw new Error('Not signed in.');
+
+  const { data: pollData, error: pollErr } = await supabase
+    .from('event_polls')
+    .insert({
+      event_id: eventId,
+      kind,
+      prompt: trimmedPrompt,
+      multiple_choice: false,
+      created_by_user_id: myUuid,
+    })
+    .select('id')
+    .single();
+  if (pollErr || !pollData) {
+    throw new Error(pollErr?.message || 'Could not create the poll.');
+  }
+  const pollId = pollData.id as string;
+
+  const optionRows = cleanOptions.map((label, position) => ({
+    poll_id: pollId,
+    label,
+    position,
+  }));
+  const { error: optErr } = await supabase
+    .from('event_poll_options')
+    .insert(optionRows);
+  if (optErr) {
+    // eslint-disable-next-line no-console
+    console.warn('[supabaseEvents] poll option insert failed:', optErr.message);
+    throw new Error(optErr.message);
+  }
+
+  return { pollId };
+}
+
+/**
+ * Invite already-connected family members to an event.
+ *
+ * Bulk-inserts event_guests rows for each user_id with rsvp='invited'.
+ * Conflicts (someone already invited / already going) are ignored — the
+ * unique constraint on (event_id, user_id) makes the insert a safe no-op
+ * for duplicates rather than an error to the caller.
+ *
+ * Skips the caller themselves (the host self-row is created at event
+ * creation time; re-inviting the host produces a confusing duplicate).
+ *
+ * A Postgres trigger on event_guests insert (added by migration
+ * 20260522000023_event_guests_push.sql) fires public.send_push_notification
+ * for each newly-inserted row that has a non-null user_id, so each invited
+ * family member gets a push: "<host> invited you to <event>".
+ */
+export async function inviteFamilyMembersToEvent(
+  eventId: string,
+  userIds: string[],
+  options?: { displayNameByUserId?: Record<string, string> },
+): Promise<{ insertedCount: number }> {
+  const { data: session } = await supabase.auth.getUser();
+  const myUuid = session.user?.id;
+  if (!myUuid) throw new Error('Not signed in.');
+
+  const unique = Array.from(new Set(userIds)).filter((u) => u && u !== myUuid);
+  if (unique.length === 0) return { insertedCount: 0 };
+
+  const rows = unique.map((userId) => ({
+    event_id: eventId,
+    user_id: userId,
+    invited_email: null,
+    display_name:
+      options?.displayNameByUserId?.[userId]?.trim() || 'Family member',
+    rsvp: 'invited' as const,
+    invited_by_user_id: myUuid,
+  }));
+
+  // Note: do NOT use .select() here — that'd require RLS to allow reading
+  // the inserted row back, and we don't need the result for anything. A
+  // bare insert with an array body returns the count without the row data.
+  const { error, count } = await supabase
+    .from('event_guests')
+    .insert(rows, { count: 'exact' });
+  if (error) {
+    throw new Error(error.message);
+  }
+  return { insertedCount: count ?? unique.length };
+}

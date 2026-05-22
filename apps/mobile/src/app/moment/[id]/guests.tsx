@@ -5,7 +5,6 @@ import { tokens } from '../../../theme/tokens';
 import { getAnyMember, type EventGuest, type EventRsvp } from '../../../lib/mockData';
 import { useEvent } from '../../../lib/eventStore';
 import { Avatar } from '../../../components/Avatar';
-import { comingSoon } from '../../../lib/comingSoon';
 
 export default function EventGuests() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,9 +32,12 @@ export default function EventGuests() {
       >
         <Header title="Guests" subtitle={event.title} />
 
-        {/* Invite CTA */}
+        {/* Invite CTA — routes to /moment/[id]/invite-guests where the user
+            picks connected family members in bulk. The event_guests insert
+            trigger pushes each invitee a notification. SMS/email entry is
+            queued as a follow-up entry point on the same screen. */}
         <Pressable
-          onPress={() => comingSoon('invite_guest')}
+          onPress={() => router.push(`/moment/${id}/invite-guests`)}
           style={({ pressed }) => ({
             backgroundColor: tokens.color.accentPrimary,
             borderRadius: 16,
@@ -43,10 +45,10 @@ export default function EventGuests() {
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>+ Invite someone</Text>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>+ Invite family</Text>
           <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 4 }}>
-            Pick from your family tree or invite by phone/email. SMS link arrives via Twilio later
-            this summer.
+            Pick from your family tree. They'll get a push notification. To invite people
+            outside FamLink, use Share link on the event page.
           </Text>
         </Pressable>
 
