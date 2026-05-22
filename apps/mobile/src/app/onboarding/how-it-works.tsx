@@ -2,24 +2,42 @@ import { router } from 'expo-router';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { OnboardingHeader, PrimaryNext } from './name';
+import { OnboardingDots, PrimaryButton } from './_shared';
 
-export default function HowItWorks() {
+/**
+ * Onboarding step 2 of 4 — what FamLink is.
+ *
+ * Three bullets that map to the three product modes:
+ *   - Events (live today)
+ *   - Stories / Questions (live today)
+ *   - Letters + Vault (coming soon — flagged so we set expectations)
+ *
+ * No interaction — just orientation. Continue moves to /onboarding/role.
+ */
+export default function OnboardingHowItWorks() {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 24,
+          paddingTop: insets.top + 48,
           paddingBottom: insets.bottom + 24,
-          paddingHorizontal: 24,
-          gap: 24,
+          paddingHorizontal: 28,
+          gap: 28,
         }}
       >
-        <OnboardingHeader step={3} total={3} />
-
-        <View>
+        <View style={{ gap: 8 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '700',
+              letterSpacing: 1.5,
+              color: tokens.color.accentPrimary,
+            }}
+          >
+            WHAT YOU CAN DO HERE
+          </Text>
           <Text
             style={{
               fontSize: 28,
@@ -28,141 +46,111 @@ export default function HowItWorks() {
               lineHeight: 34,
             }}
           >
-            How FamLink works.
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              color: tokens.color.textSecondary,
-              marginTop: 8,
-              lineHeight: 22,
-            }}
-          >
-            One answer. Three places it lives. Forever.
+            Three ways to stay close.
           </Text>
         </View>
 
-        {/* The story card — visual explainer */}
-        <View
-          style={{
-            backgroundColor: tokens.color.bgPrimary,
-            borderRadius: 20,
-            padding: 18,
-            borderWidth: 1,
-            borderColor: tokens.color.borderSubtle,
-            gap: 14,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              color: tokens.color.accentPrimary,
-              fontWeight: '700',
-              letterSpacing: 1,
-            }}
-          >
-            EXAMPLE
-          </Text>
-          <Text
-            style={{
-              fontSize: 17,
-              lineHeight: 24,
-              color: tokens.color.textPrimary,
-              fontWeight: '500',
-            }}
-          >
-            You ask Mom:{' '}
-            <Text style={{ fontStyle: 'italic' }}>
-              "What did you eat with Chicken in a Biskit crackers as a kid?"
-            </Text>
-          </Text>
-          <Text
-            style={{
-              fontSize: 17,
-              lineHeight: 24,
-              color: tokens.color.textPrimary,
-              fontWeight: '500',
-            }}
-          >
-            Mom records a 47-second voice answer.
-          </Text>
-          <View style={{ gap: 10, marginTop: 4 }}>
-            <FanOutLine label="Mom's life story" subtitle="Every memory she's ever shared" />
-            <FanOutLine label="You ↔ Mom" subtitle="The story between just the two of you" />
-            <FanOutLine label="Food memories" subtitle="A topic timeline across the whole family" />
-          </View>
-          <Text
-            style={{ fontSize: 14, color: tokens.color.textMuted, lineHeight: 20, marginTop: 4 }}
-          >
-            One answer, three places. Search any of them, find it. Print a book of any of them, it's
-            organized.
-          </Text>
-        </View>
-
-        {/* Three short principles */}
         <View style={{ gap: 14 }}>
-          <Principle
-            title="You decide who sees what."
-            body="Every answer has a visibility chip — just you and the person you asked, the whole family, or locked in your vault. Defaults to the most private option."
+          <ModeBullet
+            glyph="🎉"
+            title="Plan family time"
+            body="Reunions, vacations, holidays. Group chat, polls, packing lists, and the photos and videos from everyone in one place after."
           />
-          <Principle
-            title="Nothing gets lost."
-            body="Voice notes get transcribed. Old photos get tagged. Every memory is searchable. When you want a book one day, it's already organized."
+          <ModeBullet
+            glyph="📖"
+            title="Collect stories"
+            body="Soft daily questions for your parents and grandparents. Their answers stitch together into a personal timeline that lasts forever."
           />
-          <Principle
-            title="There's no algorithm."
-            body="No likes, no streaks, no public posts. FamLink is just for the people you invited."
+          <ModeBullet
+            glyph="💌"
+            title="Say the hard things"
+            body="Private letters and a time-locked vault — for words that need to be said but not heard yet."
+            comingSoon
           />
         </View>
-
-        <PrimaryNext label="Enter FamLink" onPress={() => router.replace('/(tabs)')} />
       </ScrollView>
-    </View>
-  );
-}
 
-function FanOutLine({ label, subtitle }: { label: string; subtitle: string }) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: tokens.color.bgTinted,
-        borderRadius: 10,
-      }}
-    >
       <View
         style={{
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: tokens.color.accentPrimary,
+          paddingHorizontal: 28,
+          paddingBottom: insets.bottom + 20,
+          paddingTop: 12,
+          gap: 16,
         }}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '700', color: tokens.color.accentPrimary }}>
-          {label}
-        </Text>
-        <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 1 }}>
-          {subtitle}
-        </Text>
+      >
+        <PrimaryButton label="Next" onPress={() => router.replace('/onboarding/role')} />
+        <OnboardingDots step={2} total={4} />
       </View>
     </View>
   );
 }
 
-function Principle({ title, body }: { title: string; body: string }) {
+function ModeBullet({
+  glyph,
+  title,
+  body,
+  comingSoon,
+}: {
+  glyph: string;
+  title: string;
+  body: string;
+  comingSoon?: boolean;
+}) {
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={{ fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}>
-        {title}
-      </Text>
-      <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
-        {body}
-      </Text>
+    <View
+      style={{
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 18,
+        padding: 18,
+        flexDirection: 'row',
+        gap: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+      }}
+    >
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          backgroundColor: tokens.color.bgTinted,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ fontSize: 24 }}>{glyph}</Text>
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}>
+            {title}
+          </Text>
+          {comingSoon ? (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                backgroundColor: tokens.color.bgTinted,
+                borderRadius: 999,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: tokens.color.accentPrimary,
+                  letterSpacing: 0.8,
+                }}
+              >
+                COMING SOON
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
+          {body}
+        </Text>
+      </View>
     </View>
   );
 }

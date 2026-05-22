@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { router } from 'expo-router';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, Pressable, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import {
@@ -25,7 +26,16 @@ import {
 } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 import { BranchSwitcher } from '../../components/BranchSwitcher';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { comingSoon } from '../../lib/comingSoon';
+import { useHasFamily } from '../../lib/useHasFamily';
+import {
+  DEMO_TODAY_PROMPT,
+  DEMO_INBOX,
+  DEMO_SUGGESTED_QUESTIONS,
+  DEMO_PEOPLE,
+  eventsFromDemo,
+} from '../../lib/demoData';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -33,27 +43,108 @@ export default function HomeScreen() {
   const branch = useCurrentBranch();
   const sel = useSelection();
   const scopedIds = useScopedBranchIds();
-  // For the daily prompt, pick the first branch in scope. Empty until the
-  // prompt engine is wired — Home falls back to a friendly empty state below.
-  const today = TODAY_PROMPTS[scopedIds[0] ?? 'pilks'];
-  const inbox = INBOX.filter((q) => scopedIds.includes(q.branchId));
-  const feed = FEED.filter((f) => scopedIds.includes(f.branchId));
   const userRole = useUserRole();
-  // For younger users (children/grandchildren), pick the first suggested
-  // question in scope. Empty until the prompt engine is wired.
-  const askSuggestion = SUGGESTED_QUESTIONS.find((q) => scopedIds.includes(q.branchId));
-  const upcomingEvents = useAllEvents()
+  const { hasFamily, loading: hasFamilyLoading, justConnected, clearCelebration } = useHasFamily();
+
+  // Real-data path
+  const realToday = TODAY_PROMPTS[scopedIds[0] ?? 'pilks'];
+  const realInbox = INBOX.filter((q) => scopedIds.includes(q.branchId));
+  const realFeed = FEED.filter((f) => scopedIds.includes(f.branchId));
+  const realAskSuggestion = SUGGESTED_QUESTIONS.find((q) => scopedIds.includes(q.branchId));
+  const realEvents = useAllEvents();
+
+  // Demo or real, depending on hasFamily
+  const today = hasFamily
+    ? realToday
+    : ({
+        id: DEMO_TODAY_PROMPT.id,
+        prompt: DEMO_TODAY_PROMPT.prompt,
+        source: 'curated' as const,
+      } as { id: string; prompt: string; source: 'ai' | 'curated' | 'family'; fromName?: string });
+  const inbox = hasFamily
+    ? realInbox
+    : DEMO_INBOX.map((q) => ({
+        id: q.id,
+        branchId: 'pilks' as const,
+        fromId: 'me' as MemberId, // tagged so MEMBERS[fromId] returns a safe stub; we render name below
+        body: q.body,
+        whenAgo: q.whenAgo,
+        // Demo passthrough fields for rendering
+        _demoFromName: q.fromId === DEMO_PEOPLE.mom.id
+          ? DEMO_PEOPLE.mom.name
+          : q.fromId === DEMO_PEOPLE.grandma.id
+            ? DEMO_PEOPLE.grandma.name
+            : 'Family member',
+        _demoFromRelationship:
+          q.fromId === DEMO_PEOPLE.mom.id
+            ? 'Mom'
+            : q.fromId === DEMO_PEOPLE.grandma.id
+              ? 'Grandma'
+              : 'Family',
+        _demoFromColor:
+          q.fromId === DEMO_PEOPLE.mom.id
+            ? DEMO_PEOPLE.mom.color
+            : q.fromId === DEMO_PEOPLE.grandma.id
+              ? DEMO_PEOPLE.grandma.color
+              : tokens.color.accentPrimary,
+        _demoFromInitials:
+          q.fromId === DEMO_PEOPLE.mom.id
+            ? DEMO_PEOPLE.mom.initials
+            : q.fromId === DEMO_PEOPLE.grandma.id
+              ? DEMO_PEOPLE.grandma.initials
+              : 'F',
+      }));
+  const feed = hasFamily ? realFeed : [];
+  const askSuggestion = hasFamily
+    ? realAskSuggestion
+    : ({
+        branchId: 'pilks' as const,
+        ask: 'me' as MemberId,
+        text: DEMO_SUGGESTED_QUESTIONS[0]!.text,
+        _demoTargetName: DEMO_PEOPLE.grandma.name,
+        _demoTargetRel: DEMO_PEOPLE.grandma.relationship,
+        _demoTargetColor: DEMO_PEOPLE.grandma.color,
+        _demoTargetInitials: DEMO_PEOPLE.grandma.initials,
+      } as any);
+  const upcomingEvents = (hasFamily ? realEvents : eventsFromDemo())
     .filter((e) => e.status !== 'past')
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const nextEvent = upcomingEvents[0];
   const nextEventDays = nextEvent ? daysUntil(nextEvent.startsAt) : Infinity;
   const hoistNextEvent = nextEvent && nextEventDays <= 60;
 
+  // One-time celebration toast when demo→real flip happens.
+  useEffect(() => {
+    if (!justConnected) return;
+    clearCelebration();
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-console
+      console.log("[FamLink] You're connected with your family now.");
+      return;
+    }
+    Alert.alert("You're connected!", "👋 You're now linked up with your family on FamLink.", [
+      { text: 'Sweet', style: 'default' },
+    ]);
+  }, [justConnected, clearCelebration]);
+
+  if (hasFamilyLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={tokens.color.accentPrimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
+      {!hasFamily && (
+        <View style={{ paddingTop: insets.top }}>
+          <DemoModeBanner />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 8,
+          paddingTop: hasFamily ? insets.top + 8 : 8,
           paddingBottom: insets.bottom + 120,
         }}
       >
@@ -204,11 +295,27 @@ export default function HomeScreen() {
           >
             <View style={{ gap: 10 }}>
               {inbox.map((q) => {
+                const demoQ = q as typeof q & {
+                  _demoFromName?: string;
+                  _demoFromRelationship?: string;
+                  _demoFromColor?: string;
+                  _demoFromInitials?: string;
+                };
                 const from = MEMBERS[q.fromId];
+                const isDemo = !!demoQ._demoFromName;
+                const displayMember = isDemo
+                  ? ({
+                      id: q.fromId,
+                      name: demoQ._demoFromName!,
+                      relationship: demoQ._demoFromRelationship!,
+                      initials: demoQ._demoFromInitials!,
+                      color: demoQ._demoFromColor!,
+                    } as typeof from)
+                  : from;
                 return (
                   <Pressable
                     key={q.id}
-                    onPress={() => router.push(`/answer/${q.id}`)}
+                    onPress={() => !isDemo && router.push(`/answer/${q.id}`)}
                     style={({ pressed }) => ({
                       backgroundColor: tokens.color.bgPrimary,
                       padding: 14,
@@ -220,12 +327,12 @@ export default function HomeScreen() {
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
-                    <Avatar member={from} size="md" />
+                    <Avatar member={displayMember} size="md" />
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{ fontSize: 13, color: tokens.color.textMuted, marginBottom: 4 }}
                       >
-                        {from.relationship} · {q.whenAgo}
+                        {displayMember.relationship} · {q.whenAgo}
                       </Text>
                       <Text
                         style={{
@@ -645,7 +752,14 @@ function PromptAction({
 function AskTodayHero({
   suggestion,
 }: {
-  suggestion: (typeof SUGGESTED_QUESTIONS)[number] | undefined;
+  suggestion:
+    | ((typeof SUGGESTED_QUESTIONS)[number] & {
+        _demoTargetName?: string;
+        _demoTargetRel?: string;
+        _demoTargetColor?: string;
+        _demoTargetInitials?: string;
+      })
+    | undefined;
 }) {
   if (!suggestion) {
     return (
@@ -667,7 +781,17 @@ function AskTodayHero({
       </View>
     );
   }
-  const target = MEMBERS[suggestion.ask as MemberId];
+  const realTarget = MEMBERS[suggestion.ask as MemberId];
+  const isDemo = !!suggestion._demoTargetName;
+  const target = isDemo
+    ? ({
+        id: 'me' as MemberId,
+        name: suggestion._demoTargetName!,
+        relationship: suggestion._demoTargetRel!,
+        initials: suggestion._demoTargetInitials!,
+        color: suggestion._demoTargetColor!,
+      } as typeof realTarget)
+    : realTarget;
   return (
     <View
       style={{
@@ -697,7 +821,7 @@ function AskTodayHero({
             {target.name} · {target.relationship}
           </Text>
           <Text style={{ color: '#FFD8E0', fontSize: 12, marginTop: 2 }}>
-            {MEMORIES_WITH[suggestion.ask as MemberId] ?? 0} memories together
+            {isDemo ? 'A few memories together' : `${MEMORIES_WITH[suggestion.ask as MemberId] ?? 0} memories together`}
           </Text>
         </View>
       </View>

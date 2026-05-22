@@ -1,9 +1,12 @@
 import { router } from 'expo-router';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { daysUntil, rsvpCount, type FamilyEvent } from '../../lib/mockData';
 import { useAllEvents, useHydrateEventsFromSupabase } from '../../lib/eventStore';
+import { useHasFamily } from '../../lib/useHasFamily';
+import { eventsFromDemo } from '../../lib/demoData';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
 
 /**
  * Events tab — the second-mode home. Reunions, vacations, holidays.
@@ -13,7 +16,9 @@ import { useAllEvents, useHydrateEventsFromSupabase } from '../../lib/eventStore
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   useHydrateEventsFromSupabase();
-  const events = useAllEvents();
+  const realEvents = useAllEvents();
+  const { hasFamily, loading } = useHasFamily();
+  const events = hasFamily ? realEvents : eventsFromDemo();
 
   const upcoming = events
     .filter((e) => e.status !== 'past')
@@ -22,11 +27,24 @@ export default function EventsScreen() {
     .filter((e) => e.status === 'past')
     .sort((a, b) => b.startsAt.localeCompare(a.startsAt));
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={tokens.color.accentPrimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
+      {!hasFamily && (
+        <View style={{ paddingTop: insets.top }}>
+          <DemoModeBanner />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 8,
+          paddingTop: hasFamily ? insets.top + 8 : 8,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 120,
           gap: 24,

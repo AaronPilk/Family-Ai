@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { tokens } from '../../theme/tokens';
 
 /**
- * 5-tab bottom bar: Home / Ask / Events / Chats / Family.
- * Vault moved off the bar (accessed from Family → "Vault for the future").
+ * 6-tab bottom bar: Home / Ask / Vault / Events / Chats / Family.
+ * Vault is back on the bar — it's load-bearing for the proof-of-life flow.
  * Timeline moved off the bar (accessed from Family → "Timeline").
  * Chats is the messaging hub — one row per event group chat for v0.
  */
@@ -40,6 +40,15 @@ export default function TabsLayout() {
           title: 'Ask',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="help-circle-outline" size={size + 2} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="vault"
+        options={{
+          title: 'Vault',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="lock-closed-outline" size={size} color={color} />
           ),
         }}
       />

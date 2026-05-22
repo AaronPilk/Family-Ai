@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { router } from 'expo-router';
-import { ScrollView, View, Text, Pressable, Switch } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, Pressable, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import {
@@ -12,6 +13,7 @@ import {
   type MemberId,
   type ExtendedMemberId,
   type FamilyEvent,
+  type ExtendedMember,
 } from '../../lib/mockData';
 import {
   useBranchStore,
@@ -25,6 +27,11 @@ import { useEventsInBranches } from '../../lib/eventStore';
 import { Avatar } from '../../components/Avatar';
 import { BranchList } from '../../components/BranchSwitcher';
 import { comingSoon } from '../../lib/comingSoon';
+import { useHasFamily } from '../../lib/useHasFamily';
+import { useIsDevUser } from '../../lib/useIsDevUser';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
+import { DEMO_PEOPLE_LIST, demoMembersAsExtended, eventsFromDemo } from '../../lib/demoData';
+import { useProfile, initialsOf } from '../../lib/useProfile';
 
 export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
@@ -36,6 +43,16 @@ export default function FamilyScreen() {
   const disableBlended = useBranchStore((s) => s.disableBlendedDemo);
   const userRole = useUserRole();
   const setUserRole = useBranchStore((s) => s.setUserRole);
+  const isDevUser = useIsDevUser();
+  const { hasFamily, loading, refresh } = useHasFamily();
+  const { profile } = useProfile();
+
+  // Refresh family count when the Family tab is shown — it's the most likely
+  // place to learn that a new member joined.
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Members across in-scope branches, deduped, excluding 'me'
   const memberIds = Array.from(new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds))).filter(
@@ -44,44 +61,93 @@ export default function FamilyScreen() {
   const immediateIds = memberIds.filter((id) => isImmediate(id));
   const otherCoreIds = memberIds.filter((id) => !isImmediate(id));
   // Extended members visible based on current branch scope.
-  const extendedIds = Object.values(EXTENDED_MEMBERS)
-    .filter((m) => scopedIds.includes(m.branchId))
-    .map((m) => m.id);
+  const realExtended = Object.values(EXTENDED_MEMBERS).filter(
+    (m): m is ExtendedMember => !!m && scopedIds.includes(m.branchId),
+  );
+  const demoExtended = hasFamily ? [] : demoMembersAsExtended();
+  const extendedList: ExtendedMember[] = [...realExtended, ...demoExtended];
 
   // Upcoming events surface here too so Family becomes the people-and-plans hub.
-  const upcomingEvents = useEventsInBranches(scopedIds)
+  const realEvents = useEventsInBranches(scopedIds);
+  const eventsForFamily = hasFamily ? realEvents : eventsFromDemo();
+  const upcomingEvents = eventsForFamily
     .filter((e) => e.status !== 'past')
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 2);
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={tokens.color.accentPrimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
+      {!hasFamily && (
+        <View style={{ paddingTop: insets.top }}>
+          <DemoModeBanner />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 8,
+          paddingTop: hasFamily ? insets.top + 8 : 8,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 120,
           gap: 22,
         }}
       >
         {/* Header */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: tokens.color.accentPrimary,
-              letterSpacing: 1.5,
-            }}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '700',
+                color: tokens.color.accentPrimary,
+                letterSpacing: 1.5,
+              }}
+            >
+              YOUR FAMILY
+            </Text>
+            <Text style={{ fontSize: 28, fontWeight: '700', color: tokens.color.textPrimary }}>
+              {branch.name}
+            </Text>
+            <Text style={{ fontSize: 14, color: tokens.color.textMuted, marginTop: 4 }}>
+              {branch.memberIds.length} members · {branch.memoryCount} memories
+            </Text>
+          </View>
+          {/* Profile chip — initials → /profile. Long-press not used; the chip is
+              big enough to tap directly, and a long-press handler conflicts with
+              the chat-screen tab-bar long-press the design rules suggested. */}
+          <Pressable
+            onPress={() => router.push('/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: tokens.color.bgTinted,
+              borderWidth: 1,
+              borderColor: tokens.color.accentSecondary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
-            YOUR FAMILY
-          </Text>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: tokens.color.textPrimary }}>
-            {branch.name}
-          </Text>
-          <Text style={{ fontSize: 14, color: tokens.color.textMuted, marginTop: 4 }}>
-            {branch.memberIds.length} members · {branch.memoryCount} memories
-          </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '700',
+                color: tokens.color.accentPrimary,
+              }}
+            >
+              {initialsOf(profile?.displayName)}
+            </Text>
+          </Pressable>
         </View>
 
         {/* Invite via link — the easiest way to onboard real family fast. */}
@@ -123,6 +189,46 @@ export default function FamilyScreen() {
             </Text>
           </View>
           <Text style={{ fontSize: 22, color: 'white' }}>›</Text>
+        </Pressable>
+
+        {/* Letters — quiet entry point. Letters are a private surface; we
+            intentionally don't promote them on the main tab bar. */}
+        <Pressable
+          onPress={() => router.push('/letters')}
+          style={({ pressed }) => ({
+            backgroundColor: tokens.color.bgPrimary,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: tokens.color.borderSubtle,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: tokens.color.bgTinted,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>✉️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: tokens.color.textPrimary }}>
+              Letters
+            </Text>
+            <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
+              Private one-way messages for hard-to-say things.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>
         </Pressable>
 
         {/* Branch list — only when 2+ */}
@@ -207,8 +313,8 @@ export default function FamilyScreen() {
         </Section>
 
         {/* Extended family — the outer ring (used for events) */}
-        {extendedIds.length > 0 && (
-          <Section title="Extended family & guests">
+        {extendedList.length > 0 && (
+          <Section title={hasFamily ? 'Extended family & guests' : 'Demo family (preview)'}>
             <Text
               style={{
                 fontSize: 12,
@@ -219,11 +325,12 @@ export default function FamilyScreen() {
                 marginBottom: 4,
               }}
             >
-              Aunts, uncles, cousins, in-laws, and family friends. They show up in your invite list
-              for reunions and vacations. Add someone once — they're in your family tree forever.
+              {hasFamily
+                ? 'Aunts, uncles, cousins, in-laws, and family friends. They show up in your invite list for reunions and vacations. Add someone once — they\'re in your family tree forever.'
+                : 'This is what your family tree could look like. Invite real people to replace this preview.'}
             </Text>
-            {extendedIds.map((id) => (
-              <ExtendedMemberRow key={id} memberId={id} />
+            {extendedList.map((m) => (
+              <ExtendedMemberRowInline key={m.id} member={m} demo={!hasFamily && DEMO_PEOPLE_LIST.some((d) => (d.id as string) === (m.id as string))} />
             ))}
             <Pressable
               onPress={() => comingSoon('invite_extended')}
@@ -365,8 +472,9 @@ export default function FamilyScreen() {
           </View>
         </Section>
 
-        {/* Demo controls — clearly labeled so it doesn't look like a real setting */}
-        <Section title="Demo controls">
+        {/* Demo controls — dev-only. Regular users never see this section. */}
+        {isDevUser && (
+        <Section title="Demo controls (dev only)">
           <View
             style={{
               backgroundColor: tokens.color.bgPrimary,
@@ -462,6 +570,7 @@ export default function FamilyScreen() {
             </Pressable>
           </View>
         </Section>
+        )}
       </ScrollView>
     </View>
   );
@@ -546,6 +655,54 @@ function MemberRow({
         )}
       </View>
       {memberId !== 'me' && <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>}
+    </Pressable>
+  );
+}
+
+function ExtendedMemberRowInline({ member: m, demo }: { member: ExtendedMember; demo?: boolean }) {
+  return (
+    <Pressable
+      onPress={() => !demo && comingSoon('extended_member_profile')}
+      style={({ pressed }) => ({
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 14,
+        padding: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+        opacity: pressed ? 0.7 : 1,
+        marginBottom: 8,
+      })}
+    >
+      <Avatar member={m} size="md" />
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: tokens.color.textPrimary }}>
+            {m.name}
+          </Text>
+          {demo && (
+            <View
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 1,
+                backgroundColor: tokens.color.accentPrimary + '18',
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ fontSize: 10, color: tokens.color.accentPrimary, fontWeight: '700' }}>
+                DEMO
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2 }}>
+          {m.relationship}
+          {m.age ? ` · ${m.age}` : ''}
+        </Text>
+      </View>
+      <Text style={{ fontSize: 22, color: tokens.color.textMuted }}>›</Text>
     </Pressable>
   );
 }

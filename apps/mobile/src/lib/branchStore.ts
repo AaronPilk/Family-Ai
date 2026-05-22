@@ -15,11 +15,32 @@ export type BranchSelection = BranchId | 'all';
  *    they're the ones with stories to tell.
  *  - 'younger' (child/grandchild) sees the "Ask someone today" card — they're
  *    the ones doing the asking.
+ *  - 'middle' (both — parent who still has living parents) defaults to Ask
+ *    mode since they're usually the connective tissue, but the Ask tab lets
+ *    them flip to Answer mode for their own kids.
  *
- * Stored here for v0; in Batch 1 this becomes a user-profile field set during
- * onboarding (derived from the relationships they declared).
+ * The DB stores this on `profiles.role` as 'elder' | 'middle' | 'child'
+ * (see migration 20260522000009). On the client we keep the historical
+ * 'younger' alias for backwards compatibility with screens written before
+ * the three-way split. `dbRoleToClient` / `clientRoleToDb` translate.
  */
-export type UserRole = 'elder' | 'younger';
+export type UserRole = 'elder' | 'middle' | 'younger';
+
+/** Persisted role values, as stored on profiles.role. */
+export type DbRole = 'elder' | 'middle' | 'child';
+
+export function dbRoleToClient(r: DbRole | null | undefined): UserRole {
+  if (r === 'elder') return 'elder';
+  if (r === 'middle') return 'middle';
+  // null or 'child' → 'younger' (the historical default).
+  return 'younger';
+}
+
+export function clientRoleToDb(r: UserRole): DbRole {
+  if (r === 'elder') return 'elder';
+  if (r === 'middle') return 'middle';
+  return 'child';
+}
 
 interface BranchState {
   selection: BranchSelection;

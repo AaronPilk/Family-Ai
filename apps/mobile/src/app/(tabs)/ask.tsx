@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, View, Text, Pressable, TextInput } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, Pressable, TextInput } from 'react-native';
 import { comingSoon } from '../../lib/comingSoon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { SUGGESTED_QUESTIONS, MEMBERS, BRANCHES, type MemberId } from '../../lib/mockData';
+import { SUGGESTED_QUESTIONS, MEMBERS, BRANCHES, type MemberId, type Member } from '../../lib/mockData';
 import {
   useCurrentBranch,
   useIsMultiBranch,
@@ -14,6 +14,9 @@ import {
 } from '../../lib/branchStore';
 import { Avatar } from '../../components/Avatar';
 import { BranchSwitcher } from '../../components/BranchSwitcher';
+import { useHasFamily } from '../../lib/useHasFamily';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
+import { DEMO_PEOPLE_LIST, DEMO_SUGGESTED_QUESTIONS } from '../../lib/demoData';
 
 /**
  * The Ask tab is now two surfaces in one. Younger users (children,
@@ -40,16 +43,38 @@ export default function AskScreen() {
     params.mode ?? (userRole === 'elder' ? 'answer' : 'ask'),
   );
 
+  const { hasFamily, loading: hasFamilyLoading } = useHasFamily();
+
   // Members across all in-scope branches (deduped, excluding 'me'). With the
   // mock-data exports emptied, MEMBERS entries for non-'me' ids carry blank
   // names — filter those out so we don't render ghost chips.
-  const branchMembers = useMemo(() => {
+  const realBranchMembers = useMemo(() => {
     const ids = new Set<MemberId>();
     scopedIds.forEach((bid) => BRANCHES[bid].memberIds.forEach((m) => m !== 'me' && ids.add(m)));
     return Array.from(ids)
       .map((id) => MEMBERS[id])
-      .filter((m) => m && m.name && m.name.length > 0);
+      .filter((m): m is Member => !!m && !!m.name && m.name.length > 0);
   }, [scopedIds]);
+
+  // Demo branchMembers: fake Member rows shaped like real ones. We use 'me'
+  // as the id slot to keep TS happy; selection key uses person.name.
+  const demoBranchMembers: Member[] = useMemo(
+    () =>
+      DEMO_PEOPLE_LIST.map(
+        (p) =>
+          ({
+            id: 'me' as MemberId, // not used for selection in demo mode
+            name: p.name,
+            relationship: p.relationship,
+            initials: p.initials,
+            color: p.color,
+            age: p.age,
+          }) as Member,
+      ),
+    [],
+  );
+
+  const branchMembers = hasFamily ? realBranchMembers : demoBranchMembers;
   const [selected, setSelected] = useState<MemberId | null>(
     (params.preselect as MemberId) ?? branchMembers[0]?.id ?? null,
   );
@@ -69,7 +94,17 @@ export default function AskScreen() {
     }
   }, [selected, branchMembers]);
 
-  const suggested = SUGGESTED_QUESTIONS.filter((s) => scopedIds.includes(s.branchId));
+  const realSuggested = SUGGESTED_QUESTIONS.filter((s) => scopedIds.includes(s.branchId));
+  const suggested = hasFamily
+    ? realSuggested
+    : DEMO_SUGGESTED_QUESTIONS.map((s, idx) => ({
+        branchId: 'pilks' as const,
+        ask: ('me' as MemberId) as MemberId,
+        text: s.text,
+        _demoRel:
+          DEMO_PEOPLE_LIST.find((p) => p.id === s.askId)?.relationship ?? 'Family',
+        _key: `demo_s_${idx}`,
+      }));
 
   function handleSuggestedTap(s: { ask: MemberId; text: string }) {
     setSelected(s.ask);
@@ -83,11 +118,24 @@ export default function AskScreen() {
     setDraft('');
   }
 
+  if (hasFamilyLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={tokens.color.accentPrimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
+      {!hasFamily && (
+        <View style={{ paddingTop: insets.top }}>
+          <DemoModeBanner />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 8,
+          paddingTop: hasFamily ? insets.top + 8 : 8,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 120,
           gap: 22,
@@ -358,32 +406,36 @@ export default function AskScreen() {
         {mode === 'ask' && suggested.length > 0 && (
         <Section title="Suggested questions">
           <View style={{ gap: 10 }}>
-            {suggested.map((s, i) => (
-              <Pressable
-                key={i}
-                onPress={() => handleSuggestedTap(s)}
-                style={({ pressed }) => ({
-                  backgroundColor: tokens.color.bgTinted,
-                  padding: 14,
-                  borderRadius: 14,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: tokens.color.accentPrimary,
-                    fontWeight: '700',
-                    marginBottom: 4,
-                  }}
+            {suggested.map((s, i) => {
+              const demoRel = (s as { _demoRel?: string })._demoRel;
+              const rel = demoRel ?? MEMBERS[s.ask]?.relationship ?? 'Family';
+              return (
+                <Pressable
+                  key={i}
+                  onPress={() => !demoRel && handleSuggestedTap(s)}
+                  style={({ pressed }) => ({
+                    backgroundColor: tokens.color.bgTinted,
+                    padding: 14,
+                    borderRadius: 14,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
                 >
-                  ASK {MEMBERS[s.ask].relationship.toUpperCase()}
-                </Text>
-                <Text style={{ fontSize: 16, color: tokens.color.textPrimary, lineHeight: 22 }}>
-                  {s.text}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: tokens.color.accentPrimary,
+                      fontWeight: '700',
+                      marginBottom: 4,
+                    }}
+                  >
+                    ASK {rel.toUpperCase()}
+                  </Text>
+                  <Text style={{ fontSize: 16, color: tokens.color.textPrimary, lineHeight: 22 }}>
+                    {s.text}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </Section>
         )}

@@ -572,6 +572,88 @@ export async function addEventMessage(eventId: string, body: string): Promise<vo
   if (error) throw new Error(error.message);
 }
 
+// ---- Event media ------------------------------------------------------------
+
+export interface EventMediaRow {
+  id: string;
+  eventId: string;
+  mediaAssetId: string;
+  storagePath: string;
+  mimeType: string | null;
+  kind: 'image' | 'video' | 'audio' | 'document' | 'screenshot';
+  width: number | null;
+  height: number | null;
+  caption: string | null;
+  postedByUserId: string;
+  postedAt: string;
+}
+
+export async function fetchEventMedia(eventId: string): Promise<EventMediaRow[]> {
+  const { data, error } = await supabase
+    .from('event_media')
+    .select(
+      `
+      id,
+      event_id,
+      media_asset_id,
+      caption,
+      posted_by_user_id,
+      posted_at,
+      media:media_asset_id (
+        storage_path,
+        mime_type,
+        kind,
+        width,
+        height
+      )
+    `,
+    )
+    .eq('event_id', eventId)
+    .order('posted_at', { ascending: false })
+    .limit(200);
+
+  if (error || !data) {
+    // eslint-disable-next-line no-console
+    console.warn('[supabaseEvents] fetchEventMedia failed:', error?.message);
+    return [];
+  }
+
+  return data.map((r) => {
+    const media = Array.isArray(r.media) ? r.media[0] : r.media;
+    return {
+      id: r.id as string,
+      eventId: r.event_id as string,
+      mediaAssetId: r.media_asset_id as string,
+      storagePath: (media?.storage_path as string) ?? '',
+      mimeType: (media?.mime_type as string | null) ?? null,
+      kind: (media?.kind as EventMediaRow['kind']) ?? 'image',
+      width: (media?.width as number | null) ?? null,
+      height: (media?.height as number | null) ?? null,
+      caption: (r.caption as string | null) ?? null,
+      postedByUserId: r.posted_by_user_id as string,
+      postedAt: r.posted_at as string,
+    };
+  });
+}
+
+export async function addEventMediaRow(args: {
+  eventId: string;
+  mediaAssetId: string;
+  caption?: string;
+}): Promise<void> {
+  const { data: session } = await supabase.auth.getUser();
+  const myUuid = session.user?.id;
+  if (!myUuid) throw new Error('Not signed in.');
+
+  const { error } = await supabase.from('event_media').insert({
+    event_id: args.eventId,
+    media_asset_id: args.mediaAssetId,
+    caption: args.caption?.trim() || null,
+    posted_by_user_id: myUuid,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function inviteEmailToEvent(
   eventId: string,
   email: string,

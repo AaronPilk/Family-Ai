@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { MEMBERS, type MemberId } from '../../lib/mockData';
 import { Avatar } from '../../components/Avatar';
-import { DemoBanner } from '../../components/DemoBanner';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
+import { useHasFamily } from '../../lib/useHasFamily';
+import { DEMO_NOTIFICATIONS, DEMO_PEOPLE_LIST } from '../../lib/demoData';
 
 interface Notif {
   id: string;
@@ -16,56 +18,6 @@ interface Notif {
   goTo?: string;
 }
 
-const NOTIFS: Notif[] = [
-  {
-    id: 'n1',
-    kind: 'question_received',
-    fromId: 'mom',
-    body: 'Linda asked you a memory question.',
-    whenAgo: '1h ago',
-    unread: true,
-    goTo: '/answer/q1',
-  },
-  {
-    id: 'n2',
-    kind: 'answer_received',
-    fromId: 'grace',
-    body: 'Grandma answered your question about holding you.',
-    whenAgo: '3h ago',
-    unread: true,
-    goTo: '/memory/3',
-  },
-  {
-    id: 'n3',
-    kind: 'vault_releasing',
-    body: 'A vault item is ready to release: "For Mike on his 50th" (in 12 years).',
-    whenAgo: 'yesterday',
-  },
-  {
-    id: 'n4',
-    kind: 'moment_update',
-    fromId: 'mom',
-    body: 'Mom voted on Tahoe family week dates.',
-    whenAgo: 'yesterday',
-    goTo: '/moment/tahoe',
-  },
-  {
-    id: 'n5',
-    kind: 'answer_received',
-    fromId: 'dad',
-    body: 'Tom answered your question about music.',
-    whenAgo: '1w ago',
-    goTo: '/memory/5',
-  },
-  {
-    id: 'n6',
-    kind: 'digest',
-    body: 'Your family added 4 memories this week. Take a look.',
-    whenAgo: '1w ago',
-    goTo: '/feed',
-  },
-];
-
 const ICON: Record<Notif['kind'], string> = {
   question_received: '❓',
   answer_received: '✨',
@@ -76,6 +28,37 @@ const ICON: Record<Notif['kind'], string> = {
 
 export default function Notifications() {
   const insets = useSafeAreaInsets();
+  const { hasFamily } = useHasFamily();
+
+  // When the user has no family, show the warm demo notification list under a
+  // sticky DEMO banner. When they have family, real notifications (none yet —
+  // this screen is still pre-supabase for notifications) would show here.
+  const items: Notif[] = hasFamily
+    ? []
+    : DEMO_NOTIFICATIONS.map((n) => {
+        const person = n.fromId
+          ? DEMO_PEOPLE_LIST.find((p) => p.id === n.fromId)
+          : undefined;
+        return {
+          id: n.id,
+          kind: n.kind,
+          fromId: undefined,
+          body: n.body,
+          whenAgo: n.whenAgo,
+          unread: n.unread,
+          // Inline demo display fields, consumed below.
+          _demoFromName: person?.name,
+          _demoFromInitials: person?.initials,
+          _demoFromColor: person?.color,
+          _demoFromRel: person?.relationship,
+        } as Notif & {
+          _demoFromName?: string;
+          _demoFromInitials?: string;
+          _demoFromColor?: string;
+          _demoFromRel?: string;
+        };
+      });
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
       <View
@@ -113,14 +96,12 @@ export default function Notifications() {
             Notifications
           </Text>
           <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 1 }}>
-            {NOTIFS.filter((n) => n.unread).length} unread
+            {items.filter((n) => n.unread).length} unread
           </Text>
         </View>
       </View>
 
-      <DemoBanner
-        message="This is what notifications will look like when you have family using FamLink. Real notifications come from real activity."
-      />
+      {!hasFamily && <DemoModeBanner />}
 
       <ScrollView
         contentContainerStyle={{
@@ -129,12 +110,46 @@ export default function Notifications() {
           gap: 8,
         }}
       >
-        {NOTIFS.map((n) => {
-          const from = n.fromId ? MEMBERS[n.fromId] : null;
+        {items.length === 0 && (
+          <View
+            style={{
+              backgroundColor: tokens.color.bgTinted,
+              padding: 24,
+              borderRadius: 18,
+              gap: 8,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: tokens.color.textPrimary }}>
+              No notifications yet
+            </Text>
+            <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
+              When your family asks you a question, answers one, or RSVPs to an event, you'll see
+              it here.
+            </Text>
+          </View>
+        )}
+        {items.map((n) => {
+          const demoN = n as Notif & {
+            _demoFromName?: string;
+            _demoFromInitials?: string;
+            _demoFromColor?: string;
+            _demoFromRel?: string;
+          };
+          const from = n.fromId
+            ? MEMBERS[n.fromId]
+            : demoN._demoFromName
+              ? {
+                  id: 'me' as MemberId,
+                  name: demoN._demoFromName,
+                  relationship: demoN._demoFromRel ?? '',
+                  initials: demoN._demoFromInitials ?? '?',
+                  color: demoN._demoFromColor ?? tokens.color.accentPrimary,
+                }
+              : null;
           return (
             <Pressable
               key={n.id}
-              onPress={() => n.goTo && router.push(n.goTo as any)}
+              onPress={() => n.goTo && router.push(n.goTo as never)}
               style={({ pressed }) => ({
                 padding: 14,
                 backgroundColor: n.unread ? tokens.color.bgTinted : tokens.color.bgPrimary,

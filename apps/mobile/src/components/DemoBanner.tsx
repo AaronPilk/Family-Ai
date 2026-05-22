@@ -1,20 +1,24 @@
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { tokens } from '../theme/tokens';
 
 /**
- * Dismissible coral banner that labels a screen as demo content. Used on
- * screens that still render canned mock data so beta users don't mistake
- * fake activity for real family activity.
+ * Dismissible coral banner labeling a screen as demo content. Reappears on
+ * next mount until the user invites family.
  *
- * State is per-mount (useState) — dismissing hides the banner for the rest
- * of the session but it returns on next navigation. That's intentional for
- * the pre-launch window; once mock screens are wired to Supabase the banner
- * gets deleted entirely.
+ * NOTE: the sticky, undismissible variant tied to `useHasFamily()` lives in
+ * `DemoModeBanner.tsx` — that's what every tab uses. This dismissible
+ * variant is kept around for one-off mock surfaces that haven't been wired
+ * to real data yet (e.g. coming-soon teaser screens). Both use the same
+ * coral-tinted background and DEMO chip.
  */
-export function DemoBanner({ message }: { message: string }) {
+export function DemoBanner({ message }: { message?: string }) {
   const [hidden, setHidden] = useState(false);
   if (hidden) return null;
+  const copy =
+    message ??
+    'DEMO — This is what FamLink looks like with family. Yours appears once you invite someone.';
   return (
     <View
       style={{
@@ -41,16 +45,28 @@ export function DemoBanner({ message }: { message: string }) {
           DEMO
         </Text>
       </View>
-      <Text
-        style={{
-          flex: 1,
-          fontSize: 13,
-          color: tokens.color.textPrimary,
-          lineHeight: 18,
-        }}
-      >
-        {message}
-      </Text>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text
+          style={{
+            fontSize: 13,
+            color: tokens.color.textPrimary,
+            lineHeight: 18,
+          }}
+        >
+          {copy}
+        </Text>
+        <Pressable onPress={() => router.push('/invite')} hitSlop={6}>
+          <Text
+            style={{
+              fontSize: 13,
+              color: tokens.color.accentPrimary,
+              fontWeight: '700',
+            }}
+          >
+            Invite family →
+          </Text>
+        </Pressable>
+      </View>
       <Pressable
         onPress={() => setHidden(true)}
         hitSlop={12}

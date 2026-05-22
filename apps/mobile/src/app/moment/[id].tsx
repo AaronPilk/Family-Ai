@@ -46,6 +46,86 @@ export default function EventDetail() {
   const togglePollVote = useEventStore((s) => s.togglePollVote);
   const toggleBringChecked = useEventStore((s) => s.toggleBringChecked);
 
+  // Demo events live only in demoData.ts (id prefix `demo_event_`) — they're
+  // never in the real event store, so we short-circuit before the
+  // "Event not found" fallback and nudge the user toward inviting family.
+  if (fallbackId.startsWith('demo_event_')) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: tokens.color.bgSecondary,
+          paddingTop: insets.top + 20,
+          paddingHorizontal: 20,
+        }}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={({ pressed }) => ({
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: tokens.color.bgPrimary,
+            borderWidth: 1,
+            borderColor: tokens.color.borderSubtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.5 : 1,
+            marginBottom: 24,
+          })}
+        >
+          <Text style={{ fontSize: 20, color: tokens.color.textPrimary, marginTop: -2 }}>‹</Text>
+        </Pressable>
+        <View
+          style={{
+            backgroundColor: tokens.color.accentPrimary + '15',
+            borderWidth: 1,
+            borderColor: tokens.color.accentPrimary + '30',
+            borderRadius: 18,
+            padding: 22,
+            gap: 10,
+          }}
+        >
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              backgroundColor: tokens.color.accentPrimary,
+              borderRadius: 4,
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: '800', fontSize: 11, letterSpacing: 0.8 }}>
+              DEMO
+            </Text>
+          </View>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: tokens.color.textPrimary }}>
+            This is demo content
+          </Text>
+          <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
+            Invite family to start real conversations, plan real events, and build memories
+            together. The demo disappears the moment someone joins.
+          </Text>
+          <Pressable
+            onPress={() => router.push('/invite')}
+            style={({ pressed }) => ({
+              alignSelf: 'flex-start',
+              marginTop: 6,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              backgroundColor: tokens.color.accentPrimary,
+              borderRadius: 999,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text style={{ color: 'white', fontWeight: '700' }}>Invite family →</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   if (!event) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

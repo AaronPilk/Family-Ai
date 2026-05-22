@@ -210,6 +210,7 @@ export async function fetchNextQuestion(
 export async function submitAnswer(args: {
   questionId: string;
   body: string;
+  mediaAssetId?: string;
 }): Promise<{ answerId: string; questionMemoryId: string }> {
   if (!args.body || args.body.trim().length === 0) {
     throw new SupabaseMemoryError('Answer cannot be empty');
@@ -236,8 +237,23 @@ export async function submitAnswer(args: {
     throw new SupabaseMemoryError('Save succeeded but no id was returned');
   }
 
+  const answerId = row.answer_id as string;
+
+  // Optional media attachment — link the just-uploaded asset to the answer
+  // via the memory_media join table. Non-fatal on failure: the answer is
+  // already saved, the photo just won't show in the timeline.
+  if (args.mediaAssetId) {
+    const { error: linkErr } = await supabase
+      .from('memory_media')
+      .insert({ memory_id: answerId, media_id: args.mediaAssetId, position: 0 });
+    if (linkErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[supabaseMemory] memory_media link failed:', linkErr.message);
+    }
+  }
+
   return {
-    answerId: row.answer_id as string,
+    answerId,
     questionMemoryId: row.question_id as string,
   };
 }

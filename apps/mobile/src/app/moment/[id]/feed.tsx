@@ -1,17 +1,78 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../../theme/tokens';
-import { getAnyMember, type EventPhoto } from '../../../lib/mockData';
-import { useEvent, useEventStore } from '../../../lib/eventStore';
+import { useEvent } from '../../../lib/eventStore';
+import {
+  addEventMediaRow,
+  fetchEventMedia,
+  getCachedDisplayName,
+  userIdToMemberId,
+  type EventMediaRow,
+} from '../../../lib/supabaseEvents';
 import { Avatar } from '../../../components/Avatar';
 import { comingSoon } from '../../../lib/comingSoon';
+import {
+  getPublicUrl,
+  pickImage,
+  uploadMedia,
+  MediaUploadError,
+} from '../../../lib/mediaUpload';
 
 export default function EventFeed() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const event = useEvent(id ?? '');
-  const postPhoto = useEventStore((s) => s.postPhoto);
+  const eventId = event?.id ?? id ?? '';
+  const [media, setMedia] = useState<EventMediaRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!eventId) return;
+    setLoading(true);
+    try {
+      const rows = await fetchEventMedia(eventId);
+      setMedia(rows);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[event/feed] fetchEventMedia failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function onPickAndUpload(kind: 'photo' | 'video') {
+    if (!eventId || uploading) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const picked = await pickImage({ mediaTypes: kind });
+      if (!picked) {
+        setUploading(false);
+        return;
+      }
+      const asset = await uploadMedia(picked, { kind });
+      await addEventMediaRow({ eventId, mediaAssetId: asset.id });
+      await refresh();
+    } catch (e) {
+      setError(
+        e instanceof MediaUploadError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Couldn't share that media.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
 
   if (!event) return null;
 
@@ -29,33 +90,61 @@ export default function EventFeed() {
 
         {/* Post a memory CTA */}
         <Pressable
-          onPress={() => {
-            // Demo: add a placeholder photo
-            postPhoto(event.id, {
-              authorId: 'me',
-              tint: '#FFD8E0',
-              caption: 'A new memory from the event',
-              mediaKind: 'photo',
-              reactions: 0,
-            });
-            comingSoon('upload_photo');
-          }}
+          onPress={() => onPickAndUpload('photo')}
+          disabled={uploading}
           style={({ pressed }) => ({
             backgroundColor: tokens.color.accentPrimary,
             borderRadius: 18,
             padding: 18,
             gap: 6,
-            opacity: pressed ? 0.85 : 1,
+            opacity: pressed || uploading ? 0.85 : 1,
+            flexDirection: 'row',
+            alignItems: 'center',
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 16 }}>
-            + Share a photo or video
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 19 }}>
-            Anything you share here is scoped to {event.title}. It also lands in the highlight reel
-            we stitch together at the end.
+          {uploading && <ActivityIndicator color="white" />}
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: 'white', fontWeight: '700', fontSize: 16 }}>
+              {uploading ? 'Uploading…' : '+ Share a photo or video'}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 19 }}>
+              Anything you share here is scoped to {event.title}. It also lands in the highlight reel
+              we stitch together at the end.
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Secondary: video */}
+        <Pressable
+          onPress={() => onPickAndUpload('video')}
+          disabled={uploading}
+          style={({ pressed }) => ({
+            backgroundColor: tokens.color.bgPrimary,
+            borderWidth: 1,
+            borderColor: tokens.color.borderSubtle,
+            borderRadius: 14,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            opacity: pressed || uploading ? 0.75 : 1,
+            alignItems: 'center',
+          })}
+        >
+          <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700', fontSize: 14 }}>
+            🎬 Share a video instead
           </Text>
         </Pressable>
+
+        {error && (
+          <View
+            style={{
+              backgroundColor: '#FFEDED',
+              borderRadius: 12,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: tokens.color.danger, fontSize: 13 }}>{error}</Text>
+          </View>
+        )}
 
         {/* Face auto-tag teaser — coming soon, sells the vision */}
         <Pressable

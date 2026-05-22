@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import {
@@ -9,9 +9,13 @@ import {
   type FamilyEvent,
   type MomentMessage,
   type MemberId,
+  type AnyMemberId,
 } from '../../lib/mockData';
 import { useEventsInBranches } from '../../lib/eventStore';
 import { useScopedBranchIds } from '../../lib/branchStore';
+import { useHasFamily } from '../../lib/useHasFamily';
+import { DemoModeBanner } from '../../components/DemoModeBanner';
+import { eventsFromDemo, demoMemberDisplay } from '../../lib/demoData';
 
 /**
  * Chats tab — every active group chat in one place. For v0 each row is an
@@ -23,7 +27,9 @@ import { useScopedBranchIds } from '../../lib/branchStore';
 export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const scopedIds = useScopedBranchIds();
-  const events = useEventsInBranches(scopedIds);
+  const realEvents = useEventsInBranches(scopedIds);
+  const { hasFamily, loading } = useHasFamily();
+  const events = hasFamily ? realEvents : eventsFromDemo();
 
   // Surface every event that has any activity OR is upcoming.
   const chats = events
@@ -36,11 +42,24 @@ export default function ChatsScreen() {
       return bt.localeCompare(at);
     });
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={tokens.color.accentPrimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
+      {!hasFamily && (
+        <View style={{ paddingTop: insets.top }}>
+          <DemoModeBanner />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 8,
+          paddingTop: hasFamily ? insets.top + 8 : 8,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 120,
           gap: 18,
@@ -217,8 +236,9 @@ function lastMessage(e: FamilyEvent): MomentMessage | undefined {
 }
 
 function messagePreview(m: MomentMessage): string {
+  const demo = demoMemberDisplay(m.authorId as AnyMemberId);
   const author = MEMBERS[m.authorId as MemberId];
-  const name = author ? author.name : getAnyMember(m.authorId).name;
+  const name = demo?.name ?? (author ? author.name : getAnyMember(m.authorId).name);
   const prefix = m.authorId === ME ? 'You' : name;
   return `${prefix}: ${m.body}`;
 }

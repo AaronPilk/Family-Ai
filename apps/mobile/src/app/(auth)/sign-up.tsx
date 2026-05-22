@@ -104,7 +104,7 @@ export default function SignUp() {
       if (claimed) {
         router.replace('/(tabs)/family');
       } else {
-        router.replace('/onboarding/name');
+        router.replace('/onboarding/welcome');
       }
     } else {
       setConfirmSent(true);

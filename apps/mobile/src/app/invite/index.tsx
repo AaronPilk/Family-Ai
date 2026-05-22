@@ -45,6 +45,16 @@ interface CircleInfo {
   name: string;
 }
 
+interface SmsLogRow {
+  id: string;
+  phone_e164: string;
+  status: 'queued' | 'sent' | 'failed';
+  sent_at: string;
+  error: string | null;
+}
+
+const SMS_HOURLY_LIMIT = 10;
+
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
   const myUuid = useMyUserId();
@@ -55,6 +65,18 @@ export default function InviteScreen() {
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedFlash, setCopiedFlash] = useState(false);
+
+  // --- SMS invite state ---
+  const [smsPhone, setSmsPhone] = useState('');
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsToast, setSmsToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(
+    null,
+  );
+  const [smsLog, setSmsLog] = useState<SmsLogRow[]>([]);
+  const recentInHour = smsLog.filter(
+    (r) => Date.now() - new Date(r.sent_at).getTime() < 60 * 60 * 1000,
+  ).length;
+  const hitHourlyCap = recentInHour >= SMS_HOURLY_LIMIT;
 
   const inviteUrl = link ? `${INVITE_BASE_URL}/${link.token}` : '';
 
@@ -131,6 +153,70 @@ export default function InviteScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadSmsLog = useCallback(async () => {
+    if (!myUuid) return;
+    const { data, error: logErr } = await supabase
+      .from('sms_invite_log')
+      .select('id, phone_e164, status, sent_at, error')
+      .eq('sender_user_id', myUuid)
+      .order('sent_at', { ascending: false })
+      .limit(10);
+    if (logErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[invite] sms log load failed:', logErr);
+      return;
+    }
+    setSmsLog((data ?? []) as SmsLogRow[]);
+  }, [myUuid]);
+
+  useEffect(() => {
+    loadSmsLog();
+  }, [loadSmsLog]);
+
+  const handleSendSms = useCallback(async () => {
+    if (!circle) return;
+    const trimmed = smsPhone.trim();
+    if (!trimmed) {
+      setSmsToast({ kind: 'error', text: 'Enter a phone number first.' });
+      return;
+    }
+    if (hitHourlyCap) {
+      setSmsToast({
+        kind: 'error',
+        text: `You can send ${SMS_HOURLY_LIMIT} invites per hour. Try again later.`,
+      });
+      return;
+    }
+    setSmsSending(true);
+    setSmsToast(null);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke<{
+        ok: boolean;
+        sid?: string;
+        error?: string;
+      }>('send_sms_invite', {
+        body: { phone: trimmed, circle_id: circle.id },
+      });
+      if (invokeErr) throw invokeErr;
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Could not send the invite.');
+      }
+      const masked = maskPhone(trimmed);
+      setSmsToast({ kind: 'success', text: `✓ Sent to ${masked}` });
+      setSmsPhone('');
+      loadSmsLog();
+    } catch (e) {
+      const msg = e instanceof Error && e.message ? e.message : 'Could not send the invite.';
+      setSmsToast({ kind: 'error', text: msg });
+      // eslint-disable-next-line no-console
+      console.warn('[invite] sms send failed:', e);
+      // Refresh anyway — the function may have written a 'failed' row.
+      loadSmsLog();
+    } finally {
+      setSmsSending(false);
+    }
+  }, [circle, smsPhone, hitHourlyCap, loadSmsLog]);
 
   const handleShare = useCallback(async () => {
     if (!link || !circle) return;
@@ -419,6 +505,168 @@ export default function InviteScreen() {
               </Pressable>
             </View>
 
+            {/* ----------------------------------------------------------- */}
+            {/* SMS invite card                                              */}
+            {/* ----------------------------------------------------------- */}
+            <View
+              style={{
+                backgroundColor: tokens.color.bgPrimary,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: tokens.color.borderSubtle,
+                padding: 18,
+                gap: 12,
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}>
+                Or send an SMS
+              </Text>
+              <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
+                We'll text them a one-tap join link.
+              </Text>
+
+              <TextInput
+                value={smsPhone}
+                onChangeText={setSmsPhone}
+                placeholder="+1 555 123 4567"
+                placeholderTextColor={tokens.color.textMuted}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                editable={!smsSending}
+                style={{
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: tokens.color.borderSubtle,
+                  paddingHorizontal: 14,
+                  fontSize: 16,
+                  color: tokens.color.textPrimary,
+                  backgroundColor: tokens.color.bgSecondary,
+                }}
+              />
+
+              <Pressable
+                onPress={handleSendSms}
+                disabled={smsSending || hitHourlyCap}
+                style={({ pressed }) => ({
+                  backgroundColor: tokens.color.accentPrimary,
+                  opacity: pressed || smsSending || hitHourlyCap ? 0.6 : 1,
+                  height: 48,
+                  borderRadius: 999,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  gap: 8,
+                })}
+              >
+                {smsSending && <ActivityIndicator size="small" color="white" />}
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                  {smsSending ? 'Sending…' : 'Send invite'}
+                </Text>
+              </Pressable>
+
+              {smsToast && (
+                <View
+                  style={{
+                    backgroundColor:
+                      smsToast.kind === 'success'
+                        ? tokens.color.success + '20'
+                        : tokens.color.danger + '20',
+                    borderRadius: 10,
+                    padding: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color:
+                        smsToast.kind === 'success'
+                          ? tokens.color.success
+                          : tokens.color.danger,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {smsToast.text}
+                  </Text>
+                </View>
+              )}
+
+              {recentInHour >= 3 && (
+                <Text style={{ fontSize: 12, color: tokens.color.textMuted }}>
+                  You can send {SMS_HOURLY_LIMIT} invites per hour ({recentInHour} used).
+                </Text>
+              )}
+            </View>
+
+            {/* ----------------------------------------------------------- */}
+            {/* Recently sent list                                           */}
+            {/* ----------------------------------------------------------- */}
+            {smsLog.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: tokens.color.bgPrimary,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: tokens.color.borderSubtle,
+                  padding: 14,
+                  gap: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: tokens.color.textMuted,
+                    fontWeight: '700',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  RECENTLY SENT
+                </Text>
+                {smsLog.map((row) => (
+                  <View
+                    key={row.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 8,
+                      borderTopWidth: 1,
+                      borderTopColor: tokens.color.borderSubtle,
+                      gap: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 14,
+                        color: tokens.color.textPrimary,
+                        fontWeight: '500',
+                      }}
+                    >
+                      {maskPhone(row.phone_e164)}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color:
+                          row.status === 'sent'
+                            ? tokens.color.success
+                            : row.status === 'failed'
+                              ? tokens.color.danger
+                              : tokens.color.textMuted,
+                      }}
+                    >
+                      {row.status}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: tokens.color.textMuted, minWidth: 64, textAlign: 'right' }}>
+                      {formatRelative(row.sent_at)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Footnote */}
             <View
               style={{
@@ -447,6 +695,34 @@ export default function InviteScreen() {
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * Mask all but the last 4 digits of a phone number.
+ *   "+15551234567" → "+1•••4567"
+ *   "(555) 123-4567" → "•••4567"
+ */
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, '');
+  if (digits.length < 4) return phone;
+  const last4 = digits.slice(-4);
+  const hasPlus = phone.trim().startsWith('+');
+  if (hasPlus) {
+    // Try to keep the country prefix visible. Heuristic: 1-3 leading digits.
+    const cc = digits.length === 11 ? digits.slice(0, 1) : digits.slice(0, Math.max(1, digits.length - 10));
+    return `+${cc}•••${last4}`;
+  }
+  return `•••${last4}`;
+}
+
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffSec = Math.floor((Date.now() - then) / 1000);
+  if (diffSec < 60) return 'just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
 }
 
 function confirmRegenerate(): Promise<boolean> {

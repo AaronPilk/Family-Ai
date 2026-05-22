@@ -26,6 +26,7 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -42,6 +43,13 @@ import {
   SupabaseMemoryError,
   type PromptTemplate,
 } from '../../lib/supabaseMemory';
+import {
+  getPublicUrl,
+  pickImage,
+  uploadMedia,
+  MediaUploadError,
+  type MediaAsset,
+} from '../../lib/mediaUpload';
 
 export default function AnswerTodayScreen() {
   const insets = useSafeAreaInsets();
@@ -57,6 +65,33 @@ export default function AnswerTodayScreen() {
   const [count, setCount] = useState<number>(0);
   const [toast, setToast] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState<number | null>(null);
+  const [attachment, setAttachment] = useState<MediaAsset | null>(null);
+  const [attaching, setAttaching] = useState(false);
+
+  async function handleAttachPhoto() {
+    if (attaching || submitting) return;
+    setErrMsg(null);
+    setAttaching(true);
+    try {
+      const picked = await pickImage({ mediaTypes: 'photo' });
+      if (!picked) {
+        setAttaching(false);
+        return;
+      }
+      const asset = await uploadMedia(picked, { kind: 'photo' });
+      setAttachment(asset);
+    } catch (e) {
+      setErrMsg(
+        e instanceof MediaUploadError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Couldn't attach that photo.",
+      );
+    } finally {
+      setAttaching(false);
+    }
+  }
 
   const loadNext = useCallback(async () => {
     if (!userId) return;
@@ -129,7 +164,11 @@ export default function AnswerTodayScreen() {
     setSubmitting(true);
     setErrMsg(null);
     try {
-      await submitAnswer({ questionId: question.id, body: draft });
+      await submitAnswer({
+        questionId: question.id,
+        body: draft,
+        mediaAssetId: attachment?.id,
+      });
       setToast('✓ Saved to your timeline');
 
       const newCount = count + 1;
@@ -140,6 +179,9 @@ export default function AnswerTodayScreen() {
         markCelebrated(milestone);
         setCelebrating(milestone);
       }
+
+      // Reset attachment for the next question.
+      setAttachment(null);
 
       // Move on after a brief beat so the toast is readable.
       setTimeout(() => {
@@ -320,12 +362,44 @@ export default function AnswerTodayScreen() {
                   }}
                 />
               </View>
-              {/* Voice / photo placeholders — wired to comingSoon until the
-                  recording stack lands. See spec: voice is out of scope. */}
+              {/* Voice placeholder stays parked (see spec: voice is out of
+                  scope). Photo now flows through mediaUpload. */}
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <SecondaryAction label="🎤 Voice" onPress={() => comingSoon('record_voice')} />
-                <SecondaryAction label="📷 Photo" onPress={() => comingSoon('attach_photo')} />
+                <SecondaryAction
+                  label={
+                    attaching ? 'Uploading…' : attachment ? '✓ Photo attached' : '📷 Photo'
+                  }
+                  onPress={handleAttachPhoto}
+                  disabled={attaching || submitting}
+                  active={!!attachment}
+                />
               </View>
+              {attachment && (
+                <View
+                  style={{
+                    backgroundColor: tokens.color.bgSecondary,
+                    borderRadius: 12,
+                    padding: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Image
+                    source={{ uri: getPublicUrl(attachment) }}
+                    style={{ width: 56, height: 56, borderRadius: 8, backgroundColor: tokens.color.bgTinted }}
+                  />
+                  <Text style={{ flex: 1, fontSize: 13, color: tokens.color.textSecondary }}>
+                    This photo will land on your timeline with your answer.
+                  </Text>
+                  <Pressable onPress={() => setAttachment(null)} hitSlop={8}>
+                    <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700', fontSize: 12 }}>
+                      Remove
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
               <Pressable
                 onPress={handleSave}
                 disabled={!draft.trim() || submitting}
@@ -413,21 +487,38 @@ export default function AnswerTodayScreen() {
   );
 }
 
-function SecondaryAction({ label, onPress }: { label: string; onPress: () => void }) {
+function SecondaryAction({
+  label,
+  onPress,
+  disabled,
+  active,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => ({
         flex: 1,
         height: 42,
         borderRadius: 12,
-        backgroundColor: tokens.color.bgTinted,
+        backgroundColor: active ? tokens.color.accentPrimary : tokens.color.bgTinted,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: pressed ? 0.6 : 1,
+        opacity: pressed || disabled ? 0.6 : 1,
       })}
     >
-      <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.color.accentPrimary }}>
+      <Text
+        style={{
+          fontSize: 14,
+          fontWeight: '600',
+          color: active ? 'white' : tokens.color.accentPrimary,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
