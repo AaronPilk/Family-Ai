@@ -1,9 +1,12 @@
 import { router } from 'expo-router';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { OnboardingDots, PrimaryButton } from './_shared';
 import { useProfile, firstNameOf } from '../../lib/useProfile';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const symbolLogo = require('../../../assets/symbol.png');
 
 /**
  * Onboarding step 1 of 4 — Welcome.
@@ -17,6 +20,7 @@ export default function OnboardingWelcome() {
   const insets = useSafeAreaInsets();
   const { profile, loading } = useProfile();
   const firstName = firstNameOf(profile?.displayName);
+  const hasRealName = !!firstName && firstName.toLowerCase() !== 'there';
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
@@ -57,7 +61,7 @@ export default function OnboardingWelcome() {
                   lineHeight: 38,
                 }}
               >
-                Welcome, {firstName}.
+                {hasRealName ? `Welcome, ${firstName}.` : 'Welcome.'}
               </Text>
             )}
             <Text
@@ -105,23 +109,28 @@ export default function OnboardingWelcome() {
 }
 
 function FamLinkLogoMark() {
-  // Lightweight glyph — the welcome screen already shows the full logo
-  // (see /welcome). Here we use a soft accent disc so onboarding feels
-  // like a fresh surface rather than a repeat of the marketing screen.
+  // Real heart-and-figures logo asset, framed in a soft tinted disc so it
+  // reads as a logo rather than a sticker.
   return (
     <View
       style={{
-        width: 96,
-        height: 96,
-        borderRadius: 48,
+        width: 112,
+        height: 112,
+        borderRadius: 56,
         backgroundColor: tokens.color.bgTinted,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: tokens.color.borderSubtle,
+        overflow: 'hidden',
       }}
     >
-      <Text style={{ fontSize: 44 }}>💗</Text>
+      <Image
+        source={symbolLogo}
+        accessibilityLabel="FamLink logo"
+        style={{ width: 76, height: 76 }}
+        resizeMode="contain"
+      />
     </View>
   );
 }

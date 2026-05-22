@@ -90,32 +90,19 @@ export default function InviteScreen() {
     setLoading(true);
 
     try {
-      // 1. Find the user's primary circle (earliest joined membership).
-      const { data: memRows, error: memErr } = await supabase
-        .from('family_memberships')
-        .select('circle_id, joined_at')
-        .eq('user_id', myUuid)
-        .order('joined_at', { ascending: true })
-        .limit(1);
-      if (memErr) throw memErr;
-      const circleId = memRows?.[0]?.circle_id as string | undefined;
+      // 1. Find or auto-create the user's primary circle. ensure_family_circle()
+      //    is idempotent: returns the existing circle if they have one,
+      //    otherwise mints a new "<display_name>'s family" and adds them as
+      //    admin. This repairs accounts that predate the signup trigger.
+      const { data: ensured, error: ensErr } = await supabase.rpc('ensure_family_circle');
+      if (ensErr) throw ensErr;
+      const ensuredRow = Array.isArray(ensured) ? ensured[0] : ensured;
+      const circleId = ensuredRow?.circle_id as string | undefined;
+      const circleName = (ensuredRow?.circle_name as string | undefined) ?? 'your family';
       if (!circleId) {
-        throw new Error(
-          'No family circle found for your account. Try signing out and back in to re-trigger account setup.',
-        );
+        throw new Error('Could not set up your family circle. Try signing out and back in.');
       }
-
-      // 2. Fetch the circle name (for the share text).
-      const { data: circleRow, error: circleErr } = await supabase
-        .from('family_circles')
-        .select('id, name')
-        .eq('id', circleId)
-        .maybeSingle();
-      if (circleErr) throw circleErr;
-      const c: CircleInfo = {
-        id: circleId,
-        name: (circleRow?.name as string | undefined) ?? 'your family',
-      };
+      const c: CircleInfo = { id: circleId, name: circleName };
       setCircle(c);
 
       // 3. Find active link, or mint one.

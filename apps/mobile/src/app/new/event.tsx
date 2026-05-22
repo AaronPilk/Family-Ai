@@ -227,18 +227,43 @@ export default function NewEvent() {
           </View>
         </Section>
 
-        {/* Invite by email */}
-        <Section label="INVITE BY EMAIL">
-          <Text
+        {/* Invite — share-link first, email as power-user fallback */}
+        <Section label="INVITE FAMILY">
+          <View
             style={{
-              fontSize: 12,
-              color: tokens.color.textMuted,
-              lineHeight: 18,
-              marginBottom: 4,
+              backgroundColor: tokens.color.bgTinted,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: tokens.color.accentPrimary + '30',
+              padding: 14,
+              gap: 6,
             }}
           >
-            One per line, or separated by commas. Each person gets a guest record on this event —
-            when they sign up later, their email matches up automatically.
+            <Text style={{ fontSize: 22 }}>💬</Text>
+            <Text
+              style={{ fontSize: 15, fontWeight: '700', color: tokens.color.textPrimary }}
+            >
+              Drop a link in your family group chat
+            </Text>
+            <Text
+              style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}
+            >
+              After you create this event, tap{' '}
+              <Text style={{ fontWeight: '700' }}>Share link</Text> on the event page. Anyone who
+              taps it joins your family and sees this event automatically. Works in iMessage,
+              WhatsApp, anywhere — no email required.
+            </Text>
+          </View>
+
+          <Text
+            style={{
+              fontSize: 11,
+              color: tokens.color.textMuted,
+              fontWeight: '700',
+              marginTop: 10,
+            }}
+          >
+            OR INVITE SPECIFIC PEOPLE BY EMAIL (OPTIONAL)
           </Text>
           <View
             style={{
@@ -248,7 +273,7 @@ export default function NewEvent() {
               borderColor: tokens.color.borderSubtle,
               paddingHorizontal: 14,
               paddingVertical: 10,
-              minHeight: 96,
+              minHeight: 72,
             }}
           >
             <TextInput
@@ -264,14 +289,15 @@ export default function NewEvent() {
                 fontSize: 15,
                 color: tokens.color.textPrimary,
                 lineHeight: 22,
-                minHeight: 72,
+                minHeight: 56,
                 textAlignVertical: 'top',
               }}
             />
           </View>
           {parsedEmails.length > 0 && (
             <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 6 }}>
-              Will invite {parsedEmails.length} {parsedEmails.length === 1 ? 'person' : 'people'}.
+              Will pre-create guest records for {parsedEmails.length}{' '}
+              {parsedEmails.length === 1 ? 'person' : 'people'}.
             </Text>
           )}
         </Section>
@@ -319,8 +345,7 @@ export default function NewEvent() {
             lineHeight: 18,
           }}
         >
-          Email + SMS sending is coming soon. Until then, share the event link with your family
-          directly.
+          You'll get a share link on the next screen — drop it into your family group chat.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
