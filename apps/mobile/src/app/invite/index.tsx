@@ -207,13 +207,20 @@ export default function InviteScreen() {
 
   const handleShare = useCallback(async () => {
     if (!link || !circle) return;
+    // Single-bubble strategy: embed the URL inside the message and DON'T pass
+    // `url` separately. iMessage was rendering two preview cards when given
+    // both (one for the text-with-link, one for the url field). With the URL
+    // only in the text body, iMessage shows one bubble with an auto-preview
+    // underneath. Other share targets (WhatsApp, mail, etc.) all handle the
+    // single-string form the same way.
     const message = `Join our family on FamLink — "${circle.name}". Tap to join: ${inviteUrl}`;
     if (Platform.OS === 'web') {
-      // Web: prefer navigator.share if available, else copy to clipboard.
+      // Web Share API: pass text only (no url field) so platforms that share
+      // to iMessage via the OS bridge don't double-preview.
       const nav: any = typeof navigator !== 'undefined' ? navigator : null;
       if (nav?.share) {
         try {
-          await nav.share({ title: 'Join our family on FamLink', text: message, url: inviteUrl });
+          await nav.share({ title: 'Join our family on FamLink', text: message });
           return;
         } catch {
           // user cancelled or unavailable, fall through to copy
@@ -223,7 +230,7 @@ export default function InviteScreen() {
       return;
     }
     try {
-      await Share.share({ message, url: inviteUrl });
+      await Share.share({ message });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('[invite] share failed:', e);
@@ -240,8 +247,9 @@ export default function InviteScreen() {
         }
       } else {
         // No clipboard package installed; on native we re-open the share sheet
-        // which exposes "Copy" as one of the targets.
-        await Share.share({ message: inviteUrl, url: inviteUrl });
+        // which exposes "Copy" as one of the targets. Pass only `message`,
+        // not `url`, to avoid iMessage double-previewing.
+        await Share.share({ message: inviteUrl });
       }
       setCopiedFlash(true);
       setTimeout(() => setCopiedFlash(false), 1500);
