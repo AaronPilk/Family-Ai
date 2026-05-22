@@ -14,9 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 
 /**
- * v0: branches are baked into mockData. Creating a brand-new branch from the UI
- * is a Phase-1 flow (real Supabase). This screen captures the inputs and shows
- * how the flow will look — saving funnels back to Family with an explainer.
+ * Multi-branch creation flow. Branches are separate family spaces for blended
+ * families, in-laws, or chosen family — nothing crosses over between branches.
+ * Persistence to Supabase lands in a future update; for now the screen captures
+ * the inputs and confirms the intent so the UX is real even though the
+ * branch isn't created server-side yet.
  */
 export default function NewBranch() {
   const insets = useSafeAreaInsets();
@@ -26,8 +28,8 @@ export default function NewBranch() {
   function handleSave() {
     if (!name.trim()) return;
     Alert.alert(
-      'Branch saved',
-      `"${name.trim()}" will exist as a separate space once real auth is wired (Batch 1). For now, you can preview multi-branch UX via the demo toggle on the Family tab.`,
+      'Saved for later',
+      `Multi-branch support — separate spaces for in-laws, divorced parents, or chosen family — is in active development. "${name.trim()}" will be created the moment that flow ships. In the meantime, your invite link adds everyone into one circle.`,
       [{ text: 'Got it', onPress: () => router.back() }],
     );
   }

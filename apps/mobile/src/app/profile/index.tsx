@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { useMyUserId, signOut } from '../../lib/sessionStore';
 import { initialsOf, updateProfile, useProfile } from '../../lib/useProfile';
-import type { DbRole } from '../../lib/branchStore';
+import type { DbRole, Gender } from '../../lib/branchStore';
 import { comingSoon } from '../../lib/comingSoon';
 import {
   getPublicUrl,
@@ -25,11 +25,50 @@ import {
   MediaUploadError,
 } from '../../lib/mediaUpload';
 
-const ROLE_LABELS: Record<DbRole, { title: string; glyph: string }> = {
-  elder: { title: "I'm a parent or grandparent", glyph: '👴' },
-  child: { title: "I'm an adult child or grandchild", glyph: '🧑' },
-  middle: { title: "Both — parent AND I still have parents", glyph: '🧓' },
-};
+/**
+ * Same 8 chips as the onboarding role picker, mirrored here so the user can
+ * change their answer post-onboarding. Each chip writes a (role, gender) pair.
+ * Legacy 'elder' values from older accounts collapse into Mom or Dad on first
+ * edit — the user picks fresh, we overwrite.
+ */
+interface RoleChip {
+  id: string;
+  label: string;
+  glyph: string;
+  role: DbRole;
+  gender: Gender | null;
+}
+
+const ROLE_CHIPS: RoleChip[] = [
+  { id: 'mom', label: 'Mom', glyph: '👩', role: 'parent', gender: 'female' },
+  { id: 'dad', label: 'Dad', glyph: '👨', role: 'parent', gender: 'male' },
+  { id: 'grandma', label: 'Grandma', glyph: '👵', role: 'grandparent', gender: 'female' },
+  { id: 'grandpa', label: 'Grandpa', glyph: '👴', role: 'grandparent', gender: 'male' },
+  { id: 'son', label: 'Son', glyph: '🧑', role: 'child', gender: 'male' },
+  { id: 'daughter', label: 'Daughter', glyph: '👧', role: 'child', gender: 'female' },
+  { id: 'grandson', label: 'Grandson', glyph: '🧒', role: 'grandchild', gender: 'male' },
+  {
+    id: 'granddaughter',
+    label: 'Granddaughter',
+    glyph: '👧',
+    role: 'grandchild',
+    gender: 'female',
+  },
+];
+
+/** Match the user's persisted (role, gender) to one of the 8 chip ids. */
+function chipIdFor(role: DbRole | null, gender: Gender | null): string | null {
+  if (!role) return null;
+  const match = ROLE_CHIPS.find((c) => c.role === role && c.gender === gender);
+  if (match) return match.id;
+  // Best-effort fallback for accounts that have role but no gender (or vice
+  // versa, or the legacy 'elder' value). Show the first chip in the bucket.
+  if (role === 'parent' || role === 'elder') return 'mom';
+  if (role === 'grandparent') return 'grandma';
+  if (role === 'child') return 'son';
+  if (role === 'grandchild') return 'grandson';
+  return null;
+}
 
 /**
  * Profile editor — /profile.
@@ -124,8 +163,10 @@ export default function ProfileScreen() {
     }
   }
 
-  async function onRoleChange(r: DbRole) {
-    await save({ role: r });
+  async function onRoleChipChange(chipId: string) {
+    const chip = ROLE_CHIPS.find((c) => c.id === chipId);
+    if (!chip) return;
+    await save({ role: chip.role, gender: chip.gender });
   }
 
   async function onUploadAvatar() {
@@ -357,13 +398,26 @@ export default function ProfileScreen() {
 
         {/* Role */}
         <Section title="Your family role">
-          <View style={{ gap: 8 }}>
-            {(Object.keys(ROLE_LABELS) as DbRole[]).map((id) => (
-              <RoleRow
-                key={id}
-                id={id}
-                active={profile?.role === id}
-                onPress={() => onRoleChange(id)}
+          <Text
+            style={{
+              fontSize: 12,
+              color: tokens.color.textMuted,
+              lineHeight: 18,
+              marginTop: -8,
+              marginBottom: 4,
+              paddingHorizontal: 4,
+            }}
+          >
+            Helps FamLink personalize prompts ("Mom, tell us about…" vs "Grandpa,
+            tell us about…") and decide whether to show you Ask or Answer mode.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {ROLE_CHIPS.map((chip) => (
+              <ProfileRoleTile
+                key={chip.id}
+                chip={chip}
+                active={chipIdFor(profile?.role ?? null, profile?.gender ?? null) === chip.id}
+                onPress={() => onRoleChipChange(chip.id)}
               />
             ))}
           </View>
@@ -489,58 +543,41 @@ function DateBox({
   );
 }
 
-function RoleRow({
-  id,
+function ProfileRoleTile({
+  chip,
   active,
   onPress,
 }: {
-  id: DbRole;
+  chip: RoleChip;
   active: boolean;
   onPress: () => void;
 }) {
-  const card = ROLE_LABELS[id];
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
+        width: '48%',
         backgroundColor: active ? tokens.color.bgTinted : tokens.color.bgPrimary,
         borderRadius: 14,
-        padding: 14,
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 12,
         borderWidth: 2,
         borderColor: active ? tokens.color.accentPrimary : tokens.color.borderSubtle,
         opacity: pressed ? 0.85 : 1,
+        alignItems: 'center',
+        gap: 4,
       })}
     >
-      <Text style={{ fontSize: 24 }}>{card.glyph}</Text>
+      <Text style={{ fontSize: 28 }}>{chip.glyph}</Text>
       <Text
         style={{
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: '700',
           color: active ? tokens.color.accentPrimary : tokens.color.textPrimary,
-          flex: 1,
         }}
       >
-        {card.title}
+        {chip.label}
       </Text>
-      <View
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          borderWidth: 2,
-          borderColor: active ? tokens.color.accentPrimary : tokens.color.borderStrong,
-          backgroundColor: active ? tokens.color.accentPrimary : 'transparent',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {active ? (
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 12 }}>✓</Text>
-        ) : null}
-      </View>
     </Pressable>
   );
 }

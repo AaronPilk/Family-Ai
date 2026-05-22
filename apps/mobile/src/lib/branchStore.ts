@@ -26,20 +26,56 @@ export type BranchSelection = BranchId | 'all';
  */
 export type UserRole = 'elder' | 'middle' | 'younger';
 
-/** Persisted role values, as stored on profiles.role. */
-export type DbRole = 'elder' | 'middle' | 'child';
+/**
+ * Persisted role values, as stored on profiles.role.
+ *
+ * The new vocabulary (parent/grandparent/child/grandchild/middle) is what
+ * onboarding writes going forward. The legacy 'elder' value is kept so older
+ * rows still type-check; the mapper below collapses it into 'elder' on the
+ * client (same Answer-mode behavior as 'parent' or 'grandparent').
+ */
+export type DbRole =
+  | 'parent'
+  | 'grandparent'
+  | 'child'
+  | 'grandchild'
+  | 'middle'
+  | 'elder'; // legacy
+
+/**
+ * User-declared gender. Drives prompt personalization in the Questions Engine
+ * ("Mom, tell me about…" vs "Dad, tell me about…"). Optional — null means
+ * the user didn't specify, and prompts fall back to neutral phrasing.
+ */
+export type Gender = 'female' | 'male' | 'nonbinary' | 'prefer_not';
 
 export function dbRoleToClient(r: DbRole | null | undefined): UserRole {
-  if (r === 'elder') return 'elder';
+  if (r === 'parent' || r === 'grandparent' || r === 'elder') return 'elder';
   if (r === 'middle') return 'middle';
-  // null or 'child' → 'younger' (the historical default).
+  // null, 'child', or 'grandchild' → 'younger' (the asker side).
   return 'younger';
 }
 
+/**
+ * Inverse of dbRoleToClient. Since UserRole is a coarse bucket, this emits
+ * the bucket-default DbRole. Callers who already know whether the user is
+ * specifically a parent vs grandparent should pass that value through
+ * `updateProfile({ role })` directly instead of routing through UserRole.
+ */
 export function clientRoleToDb(r: UserRole): DbRole {
-  if (r === 'elder') return 'elder';
+  if (r === 'elder') return 'parent';
   if (r === 'middle') return 'middle';
   return 'child';
+}
+
+/** True if the role belongs to the storyteller side (Answer mode). */
+export function isAnswererRole(r: DbRole | null | undefined): boolean {
+  return r === 'parent' || r === 'grandparent' || r === 'elder';
+}
+
+/** True if the role belongs to the asker side. */
+export function isAskerRole(r: DbRole | null | undefined): boolean {
+  return r === 'child' || r === 'grandchild';
 }
 
 interface BranchState {

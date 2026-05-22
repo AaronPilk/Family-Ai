@@ -74,8 +74,8 @@ const COPY: Record<Feature, { title: string; message: string }> = {
       'Gentle pushes: new question for you, someone answered your question, vault item about to release, weekly digest of what your family added.',
   },
   settings_row: {
-    title: 'Coming in Batch 1',
-    message: 'This setting will be functional once real auth and Supabase are wired.',
+    title: 'In progress',
+    message: 'This setting is part of the next round of polish — wiring lands soon.',
   },
   send_question: {
     title: 'Send question',

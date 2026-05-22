@@ -10,7 +10,7 @@ import { OnboardingDots, PrimaryButton } from './_shared';
  * Three bullets that map to the three product modes:
  *   - Events (live today)
  *   - Stories / Questions (live today)
- *   - Letters + Vault (coming soon — flagged so we set expectations)
+ *   - Letters + Vault (live today — the relationship-repair arc)
  *
  * No interaction — just orientation. Continue moves to /onboarding/role.
  */
@@ -65,7 +65,6 @@ export default function OnboardingHowItWorks() {
             glyph="💌"
             title="Say the hard things"
             body="Private letters and a time-locked vault — for words that need to be said but not heard yet."
-            comingSoon
           />
         </View>
       </ScrollView>

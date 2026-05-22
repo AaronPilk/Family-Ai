@@ -6,59 +6,135 @@ import { tokens } from '../../theme/tokens';
 import { OnboardingDots, PrimaryButton } from './_shared';
 import { useMyUserId } from '../../lib/sessionStore';
 import { updateProfile } from '../../lib/useProfile';
-import { useBranchStore, dbRoleToClient, type DbRole } from '../../lib/branchStore';
-
-interface RoleCard {
-  id: DbRole;
-  title: string;
-  body: string;
-  glyph: string;
-}
-
-const ROLES: RoleCard[] = [
-  {
-    id: 'elder',
-    title: "I'm a parent or grandparent",
-    body: "You're the storyteller. We'll ask you gentle questions and the answers become a timeline only your family can see.",
-    glyph: '👴',
-  },
-  {
-    id: 'child',
-    title: "I'm an adult child or grandchild",
-    body: "You're the asker. We'll help you draw stories out of your parents — softly, on their schedule.",
-    glyph: '🧑',
-  },
-  {
-    id: 'middle',
-    title: "Both — I'm a parent AND I still have parents",
-    body: "You're in the middle. We default to asking, but the Ask tab lets you flip to Answer mode for your own kids.",
-    glyph: '🧓',
-  },
-];
+import { useBranchStore, dbRoleToClient, type DbRole, type Gender } from '../../lib/branchStore';
 
 /**
  * Onboarding step 3 of 4 — Role.
  *
- * Captures the user's generational role. Persists to profiles.role and to
- * the zustand userRole so the Ask/Answer hero on Home and the default mode
- * on the Ask tab pick correctly on first paint after this screen.
+ * Captures who the user is in their family — both generational role and
+ * gender — in a single screen of chips that match how families actually
+ * talk. Mom, Dad, Grandma, Grandpa, Son, Daughter, Grandson, Granddaughter.
  *
- * The three roles map cleanly to the existing role-aware code:
- *   elder  → Answer mode (storyteller)
- *   child  → Ask mode (asker; mirrors zustand 'younger')
- *   middle → Ask mode by default; users can toggle in-app
+ * Why both fields matter: the Questions Engine personalizes prompts based
+ * on this. "Grandma, tell me about your childhood" reads very differently
+ * from "Mom, tell me about your childhood." Coarse-grained elder/child
+ * (the old vocabulary) can't tell them apart.
+ *
+ * Each chip writes a (role, gender) pair to the profile. Mapping:
+ *   Mom            → role=parent       gender=female
+ *   Dad            → role=parent       gender=male
+ *   Grandma        → role=grandparent  gender=female
+ *   Grandpa        → role=grandparent  gender=male
+ *   Son            → role=child        gender=male
+ *   Daughter       → role=child        gender=female
+ *   Grandson       → role=grandchild   gender=male
+ *   Granddaughter  → role=grandchild   gender=female
+ *   Skip / other   → role=middle       gender=null   (Ask mode default; user can
+ *                                                     refine later in /profile)
+ *
+ * The role drives Ask vs Answer mode in the rest of the app via
+ * dbRoleToClient — parent/grandparent → 'elder' (Answer hero on Home),
+ * child/grandchild → 'younger' (Ask hero), middle → 'middle'.
  */
+
+interface RoleChip {
+  id: string;
+  label: string;
+  glyph: string;
+  role: DbRole;
+  gender: Gender | null;
+  hint: string;
+}
+
+const CHIPS: RoleChip[] = [
+  {
+    id: 'mom',
+    label: 'Mom',
+    glyph: '👩',
+    role: 'parent',
+    gender: 'female',
+    hint: 'Your kids ask, you answer.',
+  },
+  {
+    id: 'dad',
+    label: 'Dad',
+    glyph: '👨',
+    role: 'parent',
+    gender: 'male',
+    hint: 'Your kids ask, you answer.',
+  },
+  {
+    id: 'grandma',
+    label: 'Grandma',
+    glyph: '👵',
+    role: 'grandparent',
+    gender: 'female',
+    hint: 'Grandkids ask, you answer.',
+  },
+  {
+    id: 'grandpa',
+    label: 'Grandpa',
+    glyph: '👴',
+    role: 'grandparent',
+    gender: 'male',
+    hint: 'Grandkids ask, you answer.',
+  },
+  {
+    id: 'son',
+    label: 'Son',
+    glyph: '🧑',
+    role: 'child',
+    gender: 'male',
+    hint: 'You ask, your parents answer.',
+  },
+  {
+    id: 'daughter',
+    label: 'Daughter',
+    glyph: '👧',
+    role: 'child',
+    gender: 'female',
+    hint: 'You ask, your parents answer.',
+  },
+  {
+    id: 'grandson',
+    label: 'Grandson',
+    glyph: '🧒',
+    role: 'grandchild',
+    gender: 'male',
+    hint: 'You ask, your grandparents answer.',
+  },
+  {
+    id: 'granddaughter',
+    label: 'Granddaughter',
+    glyph: '👧',
+    role: 'grandchild',
+    gender: 'female',
+    hint: 'You ask, your grandparents answer.',
+  },
+];
+
+const PREFER_NOT: RoleChip = {
+  id: 'prefer_not',
+  label: 'Prefer not to say',
+  glyph: '✨',
+  role: 'middle',
+  gender: 'prefer_not',
+  hint: "We'll keep prompts neutral. You can change this any time in your profile.",
+};
+
 export default function OnboardingRole() {
   const insets = useSafeAreaInsets();
   const userId = useMyUserId();
-  const [selected, setSelected] = useState<DbRole | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const selected = [...CHIPS, PREFER_NOT].find((c) => c.id === selectedId) ?? null;
 
   async function handleContinue() {
     if (!selected) return;
-    // Always update the zustand store, even if the network call fails — the
-    // user has expressed an intent and the local UI should reflect it.
-    useBranchStore.getState().setUserRole(dbRoleToClient(selected));
+    // Mirror role into zustand immediately so Home/Ask render the right hero
+    // on the next paint even if the network call lags.
+    useBranchStore.getState().setUserRole(dbRoleToClient(selected.role));
 
     if (!userId) {
       // Should not happen — the root gate routes signed-out users away.
@@ -68,11 +144,14 @@ export default function OnboardingRole() {
 
     setSaving(true);
     try {
-      await updateProfile(userId, { role: selected });
+      await updateProfile(userId, {
+        role: selected.role,
+        gender: selected.gender,
+      });
     } catch (e) {
       Alert.alert(
         "Couldn't save your role",
-        "We'll try again next time you change it in your profile. " +
+        "We'll try again next time you edit it in your profile. " +
           (e instanceof Error ? e.message : ''),
       );
     } finally {
@@ -85,10 +164,10 @@ export default function OnboardingRole() {
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 48,
+          paddingTop: insets.top + 36,
           paddingBottom: insets.bottom + 24,
-          paddingHorizontal: 28,
-          gap: 24,
+          paddingHorizontal: 24,
+          gap: 20,
         }}
       >
         <View style={{ gap: 8 }}>
@@ -110,7 +189,7 @@ export default function OnboardingRole() {
               lineHeight: 34,
             }}
           >
-            How does your family see you?
+            Who are you in your family?
           </Text>
           <Text
             style={{
@@ -120,25 +199,69 @@ export default function OnboardingRole() {
               lineHeight: 21,
             }}
           >
-            This helps FamLink show the right prompts. You can change it any time in your profile.
+            This tells FamLink whether you're the one asking questions or the one
+            answering them — and helps us write prompts that sound right.
           </Text>
         </View>
 
-        <View style={{ gap: 12 }}>
-          {ROLES.map((r) => (
-            <RoleOption
-              key={r.id}
-              card={r}
-              active={selected === r.id}
-              onPress={() => setSelected(r.id)}
+        {/* Chip grid — 2 columns */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          {CHIPS.map((c) => (
+            <RoleTile
+              key={c.id}
+              chip={c}
+              active={selectedId === c.id}
+              onPress={() => setSelectedId(c.id)}
             />
           ))}
         </View>
+
+        {/* Hint for the currently-selected chip */}
+        {selected && (
+          <View
+            style={{
+              backgroundColor: tokens.color.bgTinted,
+              borderRadius: 12,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: tokens.color.accentPrimary + '30',
+            }}
+          >
+            <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
+              {selected.hint}
+            </Text>
+          </View>
+        )}
+
+        {/* Prefer-not-to-say link — small, secondary */}
+        <Pressable
+          onPress={() => setSelectedId(PREFER_NOT.id)}
+          style={({ pressed }) => ({
+            alignSelf: 'center',
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Text
+            style={{
+              fontSize: 13,
+              color:
+                selectedId === PREFER_NOT.id
+                  ? tokens.color.accentPrimary
+                  : tokens.color.textMuted,
+              fontWeight: selectedId === PREFER_NOT.id ? '700' : '500',
+              textDecorationLine: 'underline',
+            }}
+          >
+            Prefer not to say
+          </Text>
+        </Pressable>
       </ScrollView>
 
       <View
         style={{
-          paddingHorizontal: 28,
+          paddingHorizontal: 24,
           paddingBottom: insets.bottom + 20,
           paddingTop: 12,
           gap: 16,
@@ -156,12 +279,12 @@ export default function OnboardingRole() {
   );
 }
 
-function RoleOption({
-  card,
+function RoleTile({
+  chip,
   active,
   onPress,
 }: {
-  card: RoleCard;
+  chip: RoleChip;
   active: boolean;
   onPress: () => void;
 }) {
@@ -169,59 +292,28 @@ function RoleOption({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
+        width: '48%',
         backgroundColor: active ? tokens.color.bgTinted : tokens.color.bgPrimary,
-        borderRadius: 18,
-        padding: 18,
-        flexDirection: 'row',
-        gap: 14,
+        borderRadius: 16,
+        paddingVertical: 18,
+        paddingHorizontal: 14,
         borderWidth: 2,
         borderColor: active ? tokens.color.accentPrimary : tokens.color.borderSubtle,
         opacity: pressed ? 0.85 : 1,
+        alignItems: 'center',
+        gap: 6,
       })}
     >
-      <View
+      <Text style={{ fontSize: 36 }}>{chip.glyph}</Text>
+      <Text
         style={{
-          width: 52,
-          height: 52,
-          borderRadius: 16,
-          backgroundColor: active ? 'white' : tokens.color.bgTinted,
-          alignItems: 'center',
-          justifyContent: 'center',
+          fontSize: 16,
+          fontWeight: '700',
+          color: active ? tokens.color.accentPrimary : tokens.color.textPrimary,
         }}
       >
-        <Text style={{ fontSize: 28 }}>{card.glyph}</Text>
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text
-          style={{
-            fontSize: 16,
-            fontWeight: '700',
-            color: active ? tokens.color.accentPrimary : tokens.color.textPrimary,
-          }}
-        >
-          {card.title}
-        </Text>
-        <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
-          {card.body}
-        </Text>
-      </View>
-      <View
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: 2,
-          borderColor: active ? tokens.color.accentPrimary : tokens.color.borderStrong,
-          backgroundColor: active ? tokens.color.accentPrimary : 'transparent',
-          alignItems: 'center',
-          justifyContent: 'center',
-          alignSelf: 'center',
-        }}
-      >
-        {active ? (
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>✓</Text>
-        ) : null}
-      </View>
+        {chip.label}
+      </Text>
     </Pressable>
   );
 }

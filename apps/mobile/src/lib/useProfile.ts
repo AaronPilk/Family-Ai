@@ -6,6 +6,7 @@ import {
   useBranchStore,
   dbRoleToClient,
   type DbRole,
+  type Gender,
   type UserRole,
 } from './branchStore';
 
@@ -30,6 +31,7 @@ export interface Profile {
   birthDate: string | null; // ISO date YYYY-MM-DD
   tagline: string | null;
   role: DbRole | null;
+  gender: Gender | null;
   onboardingCompleted: boolean;
 }
 
@@ -66,6 +68,7 @@ function rowToProfile(row: Record<string, unknown>, userId: string): Profile {
     birthDate: (row.birth_date as string | null) ?? null,
     tagline: (row.tagline as string | null) ?? null,
     role: (row.role as DbRole | null) ?? null,
+    gender: (row.gender as Gender | null) ?? null,
     onboardingCompleted: Boolean(row.onboarding_completed),
   };
 }
@@ -95,7 +98,7 @@ export function useProfile(): {
       const { data, error: err } = await supabase
         .from('profiles')
         .select(
-          'user_id, display_name, avatar_url, birth_date, tagline, role, onboarding_completed',
+          'user_id, display_name, avatar_url, birth_date, tagline, role, gender, onboarding_completed',
         )
         .eq('user_id', uid)
         .maybeSingle();
@@ -155,6 +158,7 @@ export async function updateProfile(
     birthDate: string | null;
     tagline: string | null;
     role: DbRole | null;
+    gender: Gender | null;
     onboardingCompleted: boolean;
     avatarUrl: string | null;
   }>,
@@ -164,6 +168,7 @@ export async function updateProfile(
   if (patch.birthDate !== undefined) row.birth_date = patch.birthDate;
   if (patch.tagline !== undefined) row.tagline = patch.tagline;
   if (patch.role !== undefined) row.role = patch.role;
+  if (patch.gender !== undefined) row.gender = patch.gender;
   if (patch.onboardingCompleted !== undefined)
     row.onboarding_completed = patch.onboardingCompleted;
   if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
@@ -182,6 +187,7 @@ export async function updateProfile(
   if (patch.birthDate !== undefined) cachePatch.birthDate = patch.birthDate;
   if (patch.tagline !== undefined) cachePatch.tagline = patch.tagline;
   if (patch.role !== undefined) cachePatch.role = patch.role;
+  if (patch.gender !== undefined) cachePatch.gender = patch.gender;
   if (patch.onboardingCompleted !== undefined)
     cachePatch.onboardingCompleted = patch.onboardingCompleted;
   if (patch.avatarUrl !== undefined) cachePatch.avatarUrl = patch.avatarUrl;
