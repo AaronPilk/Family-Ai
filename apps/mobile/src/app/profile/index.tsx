@@ -24,6 +24,7 @@ import {
   uploadMedia,
   MediaUploadError,
 } from '../../lib/mediaUpload';
+import { getMySubscription, type MySubscription } from '../../lib/billing';
 
 /**
  * Same 8 chips as the onboarding role picker, mirrored here so the user can
@@ -96,6 +97,25 @@ export default function ProfileScreen() {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [subscription, setSubscription] = useState<MySubscription | null>(null);
+
+  // Load the subscription tier for the Membership row. Best-effort: we don't
+  // block profile rendering on a failure, just hide the row.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await getMySubscription();
+        if (!cancelled) setSubscription(s);
+      } catch {
+        // ignore — row is optional UI.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Hydrate once the profile loads.
   const hydratedRef = useRef(false);
@@ -423,6 +443,42 @@ export default function ProfileScreen() {
           </View>
         </Section>
 
+        {/* Membership */}
+        <Section title="Membership">
+          <Pressable
+            onPress={() => router.push('/billing')}
+            style={({ pressed }) => ({
+              backgroundColor: tokens.color.bgPrimary,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: tokens.color.borderSubtle,
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text style={{ fontSize: 22 }}>💖</Text>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '700',
+                  color: tokens.color.textPrimary,
+                }}
+              >
+                {membershipLabel(subscription)}
+              </Text>
+              <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
+                {membershipSub(subscription)}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: tokens.color.textMuted }}>›</Text>
+          </Pressable>
+        </Section>
+
         {/* Danger / account zone */}
         <View style={{ gap: 12, marginTop: 12 }}>
           <Pressable
@@ -627,6 +683,42 @@ function InitialsAvatar({ name }: { name: string }) {
 }
 
 // ---- Helpers --------------------------------------------------------------
+
+function membershipLabel(sub: MySubscription | null): string {
+  if (!sub) return 'Membership';
+  switch (sub.status) {
+    case 'f_and_f':
+      return 'Friends & Family — free';
+    case 'active':
+      return 'FamLink Pro — active';
+    case 'trialing':
+      return 'FamLink Pro — trial';
+    case 'past_due':
+      return 'Payment failed — fix now';
+    case 'canceled':
+      return 'Subscription canceled';
+    case 'none':
+    default:
+      return 'Not subscribed yet';
+  }
+}
+
+function membershipSub(sub: MySubscription | null): string {
+  if (!sub || sub.status === 'none') return 'Tap to see pricing';
+  if (sub.status === 'f_and_f') return 'Tap to manage or upgrade';
+  if (sub.status === 'past_due' || sub.status === 'canceled') return 'Tap to update payment';
+  if (sub.currentPeriodEnd) {
+    try {
+      const d = new Date(sub.currentPeriodEnd);
+      if (!Number.isNaN(d.getTime())) {
+        return `Renews ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return 'Tap to manage';
+}
 
 function isValidDate(mm: string, dd: string, yyyy: string): boolean {
   if (mm.length === 0 || dd.length === 0 || yyyy.length !== 4) return false;

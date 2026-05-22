@@ -1,8 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, ScrollView, View, Text, Pressable, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
+import {
+  getMySubscription,
+  paywallActive,
+  isPaywallEnabled,
+  type MySubscription,
+} from '../../lib/billing';
 import {
   FEED,
   INBOX,
@@ -45,6 +51,28 @@ export default function HomeScreen() {
   const scopedIds = useScopedBranchIds();
   const userRole = useUserRole();
   const { hasFamily, loading: hasFamilyLoading, justConnected, clearCelebration } = useHasFamily();
+
+  // Subscription / paywall state. Best-effort fetch — never blocks render.
+  // `paywall_active` is computed locally and used today only to surface a
+  // "Subscribe" nudge banner when the EXPO_PUBLIC_PAYWALL_ENABLED flag is on
+  // and the user isn't yet entitled. Actual feature gating is a follow-up.
+  const [subscription, setSubscription] = useState<MySubscription | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!isPaywallEnabled()) return;
+    (async () => {
+      try {
+        const s = await getMySubscription();
+        if (!cancelled) setSubscription(s);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const paywall_active = paywallActive(subscription);
 
   // Real-data path
   const realToday = TODAY_PROMPTS[scopedIds[0] ?? 'pilks'];
@@ -148,6 +176,45 @@ export default function HomeScreen() {
           paddingBottom: insets.bottom + 120,
         }}
       >
+        {/* Paywall nudge — only shown when EXPO_PUBLIC_PAYWALL_ENABLED is on
+            AND the user isn't entitled. No-op during Friends & Family launch. */}
+        {paywall_active && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 }}>
+            <Pressable
+              onPress={() => router.push('/billing')}
+              style={({ pressed }) => ({
+                backgroundColor: tokens.color.bgTinted,
+                borderWidth: 1,
+                borderColor: tokens.color.accentSecondary,
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 18 }}>✨</Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: tokens.color.textPrimary,
+                  }}
+                >
+                  Subscribe to keep using FamLink
+                </Text>
+                <Text style={{ fontSize: 12, color: tokens.color.textSecondary, marginTop: 2 }}>
+                  $19.99/year — or claim free Friends & Family access.
+                </Text>
+              </View>
+              <Text style={{ fontSize: 18, color: tokens.color.accentPrimary }}>›</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Top branding + branch switcher */}
         <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
           <BranchSwitcher />
