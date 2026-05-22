@@ -415,6 +415,20 @@ export default function FamilyScreen() {
                 The people you build long-term memory with — parents, siblings, spouse,
                 grandparents. Default audience for Vault releases and Letters.
               </Text>
+              {/* Tap-to-edit hint — without this users assume the avatar tiles
+                  are decorative and can't find the "Change relationship" flow
+                  (Aaron's brother stuck on "Sibling" while looking for Brother). */}
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: tokens.color.accentPrimary,
+                  fontWeight: '600',
+                  paddingHorizontal: 4,
+                  marginBottom: 4,
+                }}
+              >
+                Tap anyone below to open their profile or change your relationship →
+              </Text>
               {/* View family tree — generational layout. Quiet link tucked
                   right above the avatar row. */}
               <Pressable
