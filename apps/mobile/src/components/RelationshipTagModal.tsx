@@ -11,16 +11,33 @@
  * Family tab's job. Keeps the component reusable and stateless.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { tokens } from '../theme/tokens';
 import {
+  GENDERED_RELATIONSHIP_TYPES,
   RELATIONSHIP_LABELS,
   relationshipLabelFor,
   tagRelationship,
   type FamilyMember,
   type RelationshipType,
 } from '../lib/supabaseFamily';
+
+/**
+ * One chip the picker renders. A neutral chip has genderHint=null and shows
+ * the target's gender form (or the fallback neutral label). A gendered chip
+ * has genderHint set, shows the explicit "Brother"/"Sister"/etc. label, and
+ * records that hint on the relationships row when tapped.
+ */
+interface ChipChoice {
+  /** Stable React key — includes gender hint so a pair has unique keys. */
+  key: string;
+  type: RelationshipType;
+  /** Tagger's perception of the target's gender, if the chip is a gendered one. */
+  genderHint: 'female' | 'male' | null;
+  label: string;
+  isImmediate: boolean;
+}
 
 export interface RelationshipTagModalProps {
   /** The member to tag. When null, the modal stays hidden. */
@@ -37,21 +54,70 @@ export interface RelationshipTagModalProps {
   onTagged?: (memberId: string, type: RelationshipType, isImmediate: boolean) => void;
 }
 
+/**
+ * Build the chip list for a given target. When the target's gender is known
+ * (either from their own profile or from a prior gender_hint), show neutral
+ * chips and let the label resolver pick the gendered form per chip. When
+ * gender is unknown, split each gendered type into a pair so the tagger can
+ * declare "Brother" vs "Sister" explicitly.
+ *
+ * The pair is rendered together so it reads as one decision visually:
+ * "Sibling — pick which one."
+ */
+function buildChipsForMember(member: FamilyMember | null): ChipChoice[] {
+  if (!member) return [];
+  const knownGender = member.genderHint ?? member.gender;
+  const expand = knownGender === null || knownGender === undefined;
+
+  const chips: ChipChoice[] = [];
+  for (const r of RELATIONSHIP_LABELS) {
+    if (expand && GENDERED_RELATIONSHIP_TYPES.has(r.type)) {
+      // Pair: female chip then male chip, side by side.
+      chips.push({
+        key: `${r.type}:female`,
+        type: r.type,
+        genderHint: 'female',
+        label: relationshipLabelFor(r.type, null, 'female'),
+        isImmediate: r.isImmediate,
+      });
+      chips.push({
+        key: `${r.type}:male`,
+        type: r.type,
+        genderHint: 'male',
+        label: relationshipLabelFor(r.type, null, 'male'),
+        isImmediate: r.isImmediate,
+      });
+    } else {
+      // Single neutral chip. Label uses known gender if available.
+      chips.push({
+        key: r.type,
+        type: r.type,
+        genderHint: null,
+        label: relationshipLabelFor(r.type, knownGender ?? null),
+        isImmediate: r.isImmediate,
+      });
+    }
+  }
+  return chips;
+}
+
 export function RelationshipTagModal({
   member,
   onClose,
   onTagged,
 }: RelationshipTagModalProps) {
-  const [submitting, setSubmitting] = useState<RelationshipType | null>(null);
+  const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function pick(type: RelationshipType) {
+  const chips = useMemo(() => buildChipsForMember(member), [member]);
+
+  async function pick(chip: ChipChoice) {
     if (!member || submitting) return;
-    setSubmitting(type);
+    setSubmitting(chip.key);
     setError(null);
     try {
-      const res = await tagRelationship(member.userId, type);
-      onTagged?.(member.userId, type, res.isImmediate);
+      const res = await tagRelationship(member.userId, chip.type, chip.genderHint);
+      onTagged?.(member.userId, chip.type, res.isImmediate);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
@@ -148,22 +214,22 @@ export function RelationshipTagModal({
                   justifyContent: 'center',
                 }}
               >
-                {RELATIONSHIP_LABELS.map((r) => {
-                  const isLoading = submitting === r.type;
+                {chips.map((chip) => {
+                  const isLoading = submitting === chip.key;
                   return (
                     <Pressable
-                      key={r.type}
-                      onPress={() => pick(r.type)}
+                      key={chip.key}
+                      onPress={() => pick(chip)}
                       disabled={submitting !== null}
                       style={({ pressed }) => ({
                         paddingHorizontal: 14,
                         paddingVertical: 10,
                         borderRadius: 999,
-                        backgroundColor: r.isImmediate
+                        backgroundColor: chip.isImmediate
                           ? tokens.color.accentPrimary + '12'
                           : tokens.color.bgTinted,
                         borderWidth: 1,
-                        borderColor: r.isImmediate
+                        borderColor: chip.isImmediate
                           ? tokens.color.accentPrimary + '55'
                           : tokens.color.borderSubtle,
                         opacity: pressed ? 0.7 : submitting && !isLoading ? 0.4 : 1,
@@ -182,12 +248,12 @@ export function RelationshipTagModal({
                         style={{
                           fontSize: 13,
                           fontWeight: '600',
-                          color: r.isImmediate
+                          color: chip.isImmediate
                             ? tokens.color.accentPrimary
                             : tokens.color.textPrimary,
                         }}
                       >
-                        {relationshipLabelFor(r.type, member?.gender ?? null)}
+                        {chip.label}
                       </Text>
                     </Pressable>
                   );

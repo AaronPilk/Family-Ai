@@ -53,7 +53,37 @@ interface SmsLogRow {
   error: string | null;
 }
 
+/**
+ * One recipient in the multi-invite chip list.
+ *
+ * `status` starts as 'pending' (queued in the local list, not yet fired).
+ * `handleSendAll` walks the list, flipping each chip to 'sending' as the
+ * request goes out, then 'sent' or 'failed' on response. We keep failed
+ * chips visible so the user can retry without re-typing.
+ */
+interface Recipient {
+  id: string;
+  phone: string;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+  error?: string;
+}
+
 const SMS_HOURLY_LIMIT = 10;
+
+// Tiny delay between sends so we don't fire 10 parallel Twilio calls and
+// trip the server-side rate limiter on the very last chip. Also gives the
+// UI a beat to render each chip transitioning to its final state.
+const INTER_SEND_DELAY_MS = 250;
+
+let recipientIdCounter = 0;
+function nextRecipientId(): string {
+  recipientIdCounter += 1;
+  return `r${Date.now().toString(36)}-${recipientIdCounter}`;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
@@ -66,17 +96,33 @@ export default function InviteScreen() {
   const [error, setError] = useState<string | null>(null);
   const [copiedFlash, setCopiedFlash] = useState(false);
 
-  // --- SMS invite state ---
-  const [smsPhone, setSmsPhone] = useState('');
-  const [smsSending, setSmsSending] = useState(false);
-  const [smsToast, setSmsToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(
+  // --- Multi-recipient SMS invite state ---
+  // `recipients` is the working list of chips the user has added but not yet
+  // sent (or sent and failed). `draftPhone` is the in-progress input value.
+  // We keep sent chips in the list with status='sent' until the user clears
+  // them, so they get instant feedback that their batch went out.
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [draftPhone, setDraftPhone] = useState('');
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
+  const [batchToast, setBatchToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(
     null,
   );
   const [smsLog, setSmsLog] = useState<SmsLogRow[]>([]);
+
+  // Server-side rate limit is 10/hour. We track recent sends from the log so
+  // the UI can warn before the user wastes effort queueing chips that would
+  // 429.
   const recentInHour = smsLog.filter(
     (r) => Date.now() - new Date(r.sent_at).getTime() < 60 * 60 * 1000,
   ).length;
   const hitHourlyCap = recentInHour >= SMS_HOURLY_LIMIT;
+  const remainingThisHour = Math.max(0, SMS_HOURLY_LIMIT - recentInHour);
+
+  // Counts derived from the local recipients array.
+  const unsent = recipients.filter((r) => r.status === 'pending' || r.status === 'failed');
+  const sentCount = recipients.filter((r) => r.status === 'sent').length;
+  const canSend = unsent.length > 0 && !sendingAll && !hitHourlyCap;
 
   const inviteUrl = link ? `${INVITE_BASE_URL}/${link.token}` : '';
 
@@ -161,49 +207,141 @@ export default function InviteScreen() {
     loadSmsLog();
   }, [loadSmsLog]);
 
-  const handleSendSms = useCallback(async () => {
-    if (!circle) return;
-    const trimmed = smsPhone.trim();
-    if (!trimmed) {
-      setSmsToast({ kind: 'error', text: 'Enter a phone number first.' });
+  /**
+   * Commit the draft input as a chip. Called on return key, comma, or the
+   * little "+" affordance. Validates loosely on the client (at least 7
+   * digits); the edge function does strict E.164 normalization server-side
+   * before it ever talks to Twilio, so the worst case here is a chip that
+   * fails at send time with a clear error.
+   */
+  const commitDraft = useCallback(() => {
+    const raw = draftPhone.trim().replace(/,$/, '');
+    if (!raw) {
+      setDraftError(null);
       return;
     }
+    const digits = raw.replace(/[^\d]/g, '');
+    if (digits.length < 7) {
+      setDraftError("That doesn't look like a phone number yet.");
+      return;
+    }
+    // Soft dedupe by digits — "+1 555 1234" and "5551234" count as the same chip.
+    const exists = recipients.some(
+      (r) => r.phone.replace(/[^\d]/g, '') === digits,
+    );
+    if (exists) {
+      setDraftError("You've already added that number.");
+      return;
+    }
+    setRecipients((prev) => [
+      ...prev,
+      { id: nextRecipientId(), phone: raw, status: 'pending' },
+    ]);
+    setDraftPhone('');
+    setDraftError(null);
+  }, [draftPhone, recipients]);
+
+  const removeRecipient = useCallback((id: string) => {
+    setRecipients((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
+  const clearSent = useCallback(() => {
+    setRecipients((prev) => prev.filter((r) => r.status !== 'sent'));
+    setBatchToast(null);
+  }, []);
+
+  /**
+   * Walk the unsent recipients (pending + previously-failed retries),
+   * firing send_sms_invite for each one and updating the chip's status
+   * live. Sequential, not parallel — Twilio + our 10/hr server limit are
+   * both happier with a paced loop, and the user perceives "watching
+   * messages go out one by one" as more trustworthy than a giant batch.
+   */
+  const handleSendAll = useCallback(async () => {
+    if (!circle) return;
+    if (unsent.length === 0) return;
     if (hitHourlyCap) {
-      setSmsToast({
+      setBatchToast({
         kind: 'error',
         text: `You can send ${SMS_HOURLY_LIMIT} invites per hour. Try again later.`,
       });
       return;
     }
-    setSmsSending(true);
-    setSmsToast(null);
-    try {
-      const { data, error: invokeErr } = await supabase.functions.invoke<{
-        ok: boolean;
-        sid?: string;
-        error?: string;
-      }>('send_sms_invite', {
-        body: { phone: trimmed, circle_id: circle.id },
+    // If the user queued more than they can send this hour, warn but still
+    // send up to the cap rather than refusing the whole batch.
+    if (unsent.length > remainingThisHour) {
+      setBatchToast({
+        kind: 'error',
+        text: `Only ${remainingThisHour} of your ${unsent.length} invites will go this hour. The rest will roll over — re-tap Send to finish them later.`,
       });
-      if (invokeErr) throw invokeErr;
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Could not send the invite.');
-      }
-      const masked = maskPhone(trimmed);
-      setSmsToast({ kind: 'success', text: `✓ Sent to ${masked}` });
-      setSmsPhone('');
-      loadSmsLog();
-    } catch (e) {
-      const msg = e instanceof Error && e.message ? e.message : 'Could not send the invite.';
-      setSmsToast({ kind: 'error', text: msg });
-      // eslint-disable-next-line no-console
-      console.warn('[invite] sms send failed:', e);
-      // Refresh anyway — the function may have written a 'failed' row.
-      loadSmsLog();
-    } finally {
-      setSmsSending(false);
+    } else {
+      setBatchToast(null);
     }
-  }, [circle, smsPhone, hitHourlyCap, loadSmsLog]);
+
+    setSendingAll(true);
+    let firedThisRun = 0;
+
+    for (const r of unsent) {
+      if (firedThisRun >= remainingThisHour) break; // hit the hourly cap mid-batch
+
+      setRecipients((prev) =>
+        prev.map((x) => (x.id === r.id ? { ...x, status: 'sending', error: undefined } : x)),
+      );
+
+      try {
+        const { data, error: invokeErr } = await supabase.functions.invoke<{
+          ok: boolean;
+          sid?: string;
+          error?: string;
+        }>('send_sms_invite', {
+          body: { phone: r.phone, circle_id: circle.id },
+        });
+        if (invokeErr) throw invokeErr;
+        if (!data?.ok) throw new Error(data?.error || 'Could not send.');
+
+        setRecipients((prev) =>
+          prev.map((x) => (x.id === r.id ? { ...x, status: 'sent' } : x)),
+        );
+      } catch (e) {
+        const msg = e instanceof Error && e.message ? e.message : 'Send failed.';
+        setRecipients((prev) =>
+          prev.map((x) => (x.id === r.id ? { ...x, status: 'failed', error: msg } : x)),
+        );
+        // eslint-disable-next-line no-console
+        console.warn('[invite] sms send failed:', r.phone, e);
+      }
+
+      firedThisRun += 1;
+      await sleep(INTER_SEND_DELAY_MS);
+    }
+
+    setSendingAll(false);
+    loadSmsLog();
+
+    // Post-batch summary toast. Recompute counts from latest state via the
+    // setter callback so we report the truth, not a stale snapshot.
+    setRecipients((prev) => {
+      const sent = prev.filter((x) => x.status === 'sent').length;
+      const failed = prev.filter((x) => x.status === 'failed').length;
+      if (sent > 0 && failed === 0) {
+        setBatchToast({
+          kind: 'success',
+          text: `✓ ${sent} invite${sent === 1 ? '' : 's'} sent.`,
+        });
+      } else if (sent > 0 && failed > 0) {
+        setBatchToast({
+          kind: 'error',
+          text: `Sent ${sent}, ${failed} failed. Tap a failed chip to remove it, or hit Send again to retry.`,
+        });
+      } else if (failed > 0) {
+        setBatchToast({
+          kind: 'error',
+          text: `All ${failed} send${failed === 1 ? '' : 's'} failed. Check the numbers and try again.`,
+        });
+      }
+      return prev;
+    });
+  }, [circle, unsent, hitHourlyCap, remainingThisHour, loadSmsLog]);
 
   const handleShare = useCallback(async () => {
     if (!link || !circle) return;
@@ -507,7 +645,7 @@ export default function InviteScreen() {
             </View>
 
             {/* ----------------------------------------------------------- */}
-            {/* SMS invite card                                              */}
+            {/* Multi-recipient SMS invite card                              */}
             {/* ----------------------------------------------------------- */}
             <View
               style={{
@@ -520,58 +658,139 @@ export default function InviteScreen() {
                 marginTop: 8,
               }}
             >
-              <Text style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}>
-                Or send an SMS
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                <Text
+                  style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}
+                >
+                  Or text them directly
+                </Text>
+                {sentCount > 0 && (
+                  <Text style={{ fontSize: 12, color: tokens.color.success, fontWeight: '600' }}>
+                    {sentCount} sent
+                  </Text>
+                )}
+              </View>
               <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
-                We'll text them a one-tap join link.
+                Add Mom, Dad, your siblings, grandparents — anyone. We'll text everyone a
+                one-tap join link.
               </Text>
 
-              <TextInput
-                value={smsPhone}
-                onChangeText={setSmsPhone}
-                placeholder="+1 555 123 4567"
-                placeholderTextColor={tokens.color.textMuted}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                editable={!smsSending}
-                style={{
-                  height: 48,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: tokens.color.borderSubtle,
-                  paddingHorizontal: 14,
-                  fontSize: 16,
-                  color: tokens.color.textPrimary,
-                  backgroundColor: tokens.color.bgSecondary,
-                }}
-              />
+              {/* Draft input row: number field + add chip button */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  value={draftPhone}
+                  onChangeText={(v) => {
+                    setDraftPhone(v);
+                    if (draftError) setDraftError(null);
+                    // Comma is a "commit this chip" shortcut on web/desktop.
+                    if (v.endsWith(',')) {
+                      setDraftPhone(v.slice(0, -1));
+                      setTimeout(commitDraft, 0);
+                    }
+                  }}
+                  onSubmitEditing={commitDraft}
+                  placeholder="+1 555 123 4567"
+                  placeholderTextColor={tokens.color.textMuted}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  returnKeyType="done"
+                  editable={!sendingAll}
+                  style={{
+                    flex: 1,
+                    height: 48,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: draftError
+                      ? tokens.color.danger + '80'
+                      : tokens.color.borderSubtle,
+                    paddingHorizontal: 14,
+                    fontSize: 16,
+                    color: tokens.color.textPrimary,
+                    backgroundColor: tokens.color.bgSecondary,
+                  }}
+                />
+                <Pressable
+                  onPress={commitDraft}
+                  disabled={!draftPhone.trim() || sendingAll}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    height: 48,
+                    width: 48,
+                    borderRadius: 12,
+                    backgroundColor: tokens.color.bgTinted,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed || !draftPhone.trim() || sendingAll ? 0.4 : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontSize: 24,
+                      color: tokens.color.accentPrimary,
+                      fontWeight: '700',
+                      marginTop: -2,
+                    }}
+                  >
+                    +
+                  </Text>
+                </Pressable>
+              </View>
 
+              {draftError && (
+                <Text style={{ fontSize: 12, color: tokens.color.danger, paddingHorizontal: 2 }}>
+                  {draftError}
+                </Text>
+              )}
+
+              {/* Chip list */}
+              {recipients.length > 0 && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {recipients.map((r) => (
+                    <RecipientChip
+                      key={r.id}
+                      recipient={r}
+                      onRemove={() => removeRecipient(r.id)}
+                      disabled={sendingAll}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Send all button — primary CTA, shows count of unsent chips */}
               <Pressable
-                onPress={handleSendSms}
-                disabled={smsSending || hitHourlyCap}
+                onPress={handleSendAll}
+                disabled={!canSend}
                 style={({ pressed }) => ({
                   backgroundColor: tokens.color.accentPrimary,
-                  opacity: pressed || smsSending || hitHourlyCap ? 0.6 : 1,
+                  opacity: pressed || !canSend ? 0.4 : 1,
                   height: 48,
                   borderRadius: 999,
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexDirection: 'row',
                   gap: 8,
+                  marginTop: 4,
                 })}
               >
-                {smsSending && <ActivityIndicator size="small" color="white" />}
+                {sendingAll && <ActivityIndicator size="small" color="white" />}
                 <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
-                  {smsSending ? 'Sending…' : 'Send invite'}
+                  {sendingAll
+                    ? 'Sending…'
+                    : unsent.length === 0
+                      ? sentCount > 0
+                        ? 'All sent ✓'
+                        : 'Add someone above'
+                      : unsent.length === 1
+                        ? 'Send 1 invite'
+                        : `Send ${unsent.length} invites`}
                 </Text>
               </Pressable>
 
-              {smsToast && (
+              {batchToast && (
                 <View
                   style={{
                     backgroundColor:
-                      smsToast.kind === 'success'
+                      batchToast.kind === 'success'
                         ? tokens.color.success + '20'
                         : tokens.color.danger + '20',
                     borderRadius: 10,
@@ -582,21 +801,50 @@ export default function InviteScreen() {
                     style={{
                       fontSize: 13,
                       color:
-                        smsToast.kind === 'success'
+                        batchToast.kind === 'success'
                           ? tokens.color.success
                           : tokens.color.danger,
                       fontWeight: '600',
+                      lineHeight: 19,
                     }}
                   >
-                    {smsToast.text}
+                    {batchToast.text}
                   </Text>
                 </View>
               )}
 
-              {recentInHour >= 3 && (
-                <Text style={{ fontSize: 12, color: tokens.color.textMuted }}>
-                  You can send {SMS_HOURLY_LIMIT} invites per hour ({recentInHour} used).
-                </Text>
+              {/* Footer row: rate-limit hint + clear-sent shortcut */}
+              {(recentInHour >= 3 || sentCount > 0) && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  {recentInHour >= 3 ? (
+                    <Text style={{ fontSize: 12, color: tokens.color.textMuted, flex: 1 }}>
+                      {remainingThisHour} of {SMS_HOURLY_LIMIT} invites left this hour.
+                    </Text>
+                  ) : (
+                    <View style={{ flex: 1 }} />
+                  )}
+                  {sentCount > 0 && !sendingAll && (
+                    <Pressable onPress={clearSent} hitSlop={8}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: tokens.color.accentPrimary,
+                          fontWeight: '600',
+                          textDecorationLine: 'underline',
+                        }}
+                      >
+                        Clear sent
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
             </View>
 
@@ -696,6 +944,137 @@ export default function InviteScreen() {
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * Visual chip for one pending/sending/sent/failed recipient.
+ *
+ * - pending: neutral background, X button on the right to remove.
+ * - sending: spinner replaces the X. Not removable mid-flight.
+ * - sent:    success tint, ✓ icon. Removable.
+ * - failed:  danger tint, ! icon, tap to see the error in an alert.
+ *            Stays in the list so the user can retry on the next Send.
+ */
+function RecipientChip({
+  recipient,
+  onRemove,
+  disabled,
+}: {
+  recipient: Recipient;
+  onRemove: () => void;
+  disabled: boolean;
+}) {
+  const { phone, status, error } = recipient;
+  const isSending = status === 'sending';
+  const isSent = status === 'sent';
+  const isFailed = status === 'failed';
+
+  const bg = isSent
+    ? tokens.color.success + '18'
+    : isFailed
+      ? tokens.color.danger + '18'
+      : tokens.color.bgTinted;
+  const border = isSent
+    ? tokens.color.success + '60'
+    : isFailed
+      ? tokens.color.danger + '60'
+      : tokens.color.borderSubtle;
+  const textColor = isSent
+    ? tokens.color.success
+    : isFailed
+      ? tokens.color.danger
+      : tokens.color.textPrimary;
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (isFailed && error) {
+          if (Platform.OS === 'web') {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+              window.alert(error);
+            }
+          } else {
+            Alert.alert("Couldn't send", error);
+          }
+        }
+      }}
+      disabled={!isFailed}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingLeft: 12,
+        paddingRight: 6,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: bg,
+        borderWidth: 1,
+        borderColor: border,
+      }}
+    >
+      {isSent && (
+        <Text style={{ fontSize: 13, color: textColor, fontWeight: '700' }}>✓</Text>
+      )}
+      {isFailed && (
+        <Text style={{ fontSize: 13, color: textColor, fontWeight: '700' }}>!</Text>
+      )}
+      <Text style={{ fontSize: 14, fontWeight: '600', color: textColor }}>
+        {prettifyPhone(phone)}
+      </Text>
+      {isSending ? (
+        <ActivityIndicator
+          size="small"
+          color={tokens.color.accentPrimary}
+          style={{ marginLeft: 2, marginRight: 4 }}
+        />
+      ) : (
+        <Pressable
+          onPress={onRemove}
+          disabled={disabled || isSending}
+          hitSlop={6}
+          style={({ pressed }) => ({
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.5 : 1,
+          })}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              color: tokens.color.textMuted,
+              fontWeight: '600',
+              marginTop: -2,
+            }}
+          >
+            ×
+          </Text>
+        </Pressable>
+      )}
+    </Pressable>
+  );
+}
+
+/**
+ * Light formatting for display only. Doesn't touch what we send to the
+ * server (the edge function does strict E.164 normalization itself):
+ *   "+15551234567" → "+1 (555) 123-4567"
+ *   "5551234567"   → "(555) 123-4567"
+ *   anything weird → returned as-is
+ */
+function prettifyPhone(raw: string): string {
+  const trimmed = raw.trim();
+  const hasPlus = trimmed.startsWith('+');
+  const digits = trimmed.replace(/[^\d]/g, '');
+  if (hasPlus && digits.length === 11 && digits.startsWith('1')) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  if (!hasPlus && digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return raw;
 }
 
 /**

@@ -59,5 +59,18 @@ enabled = true
 policy = "per_worker"
 inspector_port = 8083
 
+# Per-function settings. Anything not listed defaults to verify_jwt = true.
+[functions.send_push]
+# JWT verify must be OFF because this project uses the new sb_publishable_/
+# sb_secret_ API key system. pg_net calls send_push with the auto-injected
+# SUPABASE_SERVICE_ROLE_KEY (an sb_secret_... string on new-key projects),
+# which is NOT a JWT. With verify_jwt = true, Supabase's edge gateway
+# rejects the request as UNAUTHORIZED_INVALID_JWT_FORMAT before our code
+# runs. With it off, the bearer reaches the function and our internal
+# `bearer === SERVICE_ROLE` check handles auth. See:
+# - migration 20260522000018_push_helper_vault.sql
+# - memory: famlink-supabase-new-key-system
+verify_jwt = false
+
 [analytics]
 enabled = false

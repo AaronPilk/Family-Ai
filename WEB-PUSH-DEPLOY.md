@@ -59,29 +59,51 @@ supabase secrets list | grep VAPID
 
 ---
 
-## 3. Set Postgres GUCs for the triggers
+## 3. Store the service role secret in Supabase Vault
 
-The trigger functions read the Supabase URL + service role key from project
-settings (GUCs) so they can fan out to the `send_push` Edge Function. Run
-these in the SQL editor (Dashboard → SQL → New query) as the project owner:
+The trigger helper `public.send_push_notification` reads the service role
+secret from Supabase Vault so it can call the `send_push` Edge Function.
+The project URL is hardcoded in the migration (it's public, not a secret).
+
+> Why Vault and not Postgres GUCs? Hosted Supabase blocks the `postgres`
+> role from running `ALTER DATABASE ... SET app.settings.*` (error 42501).
+> The old GUC instructions silently failed — the helper hit its no-op
+> branch on every trigger and no push ever went out. Migration
+> `20260522000018_push_helper_vault.sql` moved the read to Vault to work
+> around this.
+
+**Which key to paste — depends on your project's key system:**
+
+- **New-key projects (Publishable / Secret keys enabled — FamLink is one):**
+  Use the value from Project Settings → API → **Publishable and secret
+  API keys** tab → `sb_secret_...`. This is what gets auto-injected as
+  `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` inside the edge function on
+  these projects.
+- **Legacy-only projects:** Use the legacy `service_role` JWT from the
+  "Legacy anon, service_role API keys" tab.
+
+The bearer the trigger sends and the env var the edge function compares
+against must match exactly. Mismatch = silent 401 from the function.
+
+One-time setup, done in the dashboard:
+
+1. Project Settings → **Vault** → **Secrets** → **Add new secret**.
+2. Name: `service_role_key` (exact spelling — the SQL function looks it up by name).
+3. Secret: paste the correct key per the rules above.
+4. Description: anything useful, e.g. `Used by send_push_notification to call the send_push edge function`.
+5. Save.
+
+Verify:
 
 ```sql
-alter database postgres set app.settings.supabase_url
-  = 'https://<your-project-ref>.supabase.co';
-alter database postgres set app.settings.service_role_key
-  = '<your service role key>';
+select name, created_at
+  from vault.decrypted_secrets
+ where name = 'service_role_key';
 ```
 
-These persist across sessions. To verify:
-
-```sql
-select current_setting('app.settings.supabase_url', true),
-       current_setting('app.settings.service_role_key', true) is not null as has_key;
-```
-
-(If either is null after these commands, you ran them in a session that
-hasn't been reloaded — issue `select pg_reload_conf();` and re-test from a
-fresh SQL editor tab.)
+If you get one row, you're good. The migration also hardcodes the project URL
+to `https://yaogxksbhpiqmgjuuqnj.supabase.co` — if you ever move projects,
+update the `v_url` constant in `20260522000018_push_helper_vault.sql`.
 
 ---
 
@@ -113,7 +135,22 @@ Supabase Database Webhook configured from the dashboard pointing at
 supabase functions deploy send_push
 ```
 
-Verify in the dashboard → Edge Functions → send_push is deployed.
+`supabase/config.toml` has `[functions.send_push] verify_jwt = false`, so the
+CLI sends the function up with JWT verification disabled at Supabase's edge
+gateway — required on new-key projects because `sb_secret_...` isn't a JWT
+and the gateway would otherwise reject it as `UNAUTHORIZED_INVALID_JWT_FORMAT`
+before our function code runs. The function still authenticates the caller
+itself by comparing the bearer to `SUPABASE_SERVICE_ROLE_KEY`.
+
+If you ever deploy without that config (e.g. via the dashboard's code
+editor, which ignores config.toml), redeploy with the flag explicitly:
+
+```bash
+supabase functions deploy send_push --no-verify-jwt
+```
+
+Verify in the dashboard → Edge Functions → send_push is deployed and that
+its "Verify JWT" toggle reads OFF.
 
 ---
 
@@ -155,20 +192,40 @@ Android Chrome:
 
 ## 8. Sanity check the data path
 
-```bash
-# As the signed-in user, fire a test push to yourself:
-curl -X POST "https://<ref>.supabase.co/functions/v1/send_push" \
-  -H "Authorization: Bearer <USER_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "<your uuid>",
-    "title": "FamLink test",
-    "body": "If you see this, push works.",
-    "url": "/"
-  }'
+The canonical end-to-end test goes through the SQL helper, which is the
+same code path every trigger uses. Run in the Supabase SQL editor:
+
+```sql
+select public.send_push_notification(
+  (select id from auth.users where email = '<you@example.com>'),
+  'FamLink',
+  'If you see this, push works.',
+  '/'
+);
 ```
 
-Expected response: `{"ok":true,"sent":1,"removed":0,"failures":[]}`.
+Then immediately:
+
+```sql
+select status_code, content, created
+from net._http_response
+order by created desc
+limit 1;
+```
+
+Expected: `status_code = 200`, `content = {"ok":true,"sent":1,"removed":0,"failures":[]}`,
+and your device pings within ~2 seconds.
+
+Common non-200 cases:
+
+- **`401` with `UNAUTHORIZED_INVALID_JWT_FORMAT`** — `send_push` was deployed
+  with JWT verify ON. Redeploy with `--no-verify-jwt` (see step 5).
+- **`401` with `{"ok":false,"error":"Not authorized"}`** — the Vault secret
+  doesn't match `SUPABASE_SERVICE_ROLE_KEY` in the edge function. Re-check
+  step 3 (the right key depends on whether this is a new-key project).
+- **`200` with `"sent":0` and `"note":"no subscriptions for user"`** — the
+  target user has no push_subscriptions row. Open the PWA on a device,
+  accept the prompt, and try again.
 
 `removed` = subscriptions pruned because the push service returned 410 Gone
 (stale device). It's normal to see >0 once devices expire.

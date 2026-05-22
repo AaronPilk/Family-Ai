@@ -26,7 +26,19 @@ export interface FamilyMember {
   isImmediate: boolean;
   invitedViaUserId: string | null;
   relationshipType: string | null; // label the viewer has tagged on them
+  /**
+   * Target's own self-declared gender, from public.profiles.gender. Null
+   * when the target hasn't completed onboarding or chose "prefer not to say."
+   */
   gender: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null;
+  /**
+   * The viewer's perception of the target's gender for the purpose of THIS
+   * relationship. Populated from public.relationships.gender_hint when the
+   * viewer tagged with a gendered chip (Brother / Sister / Mom / Dad etc.).
+   * Preferred over `gender` for label display so the viewer's chosen form
+   * sticks even after the target later sets their own profile.gender.
+   */
+  genderHint: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null;
 }
 
 export interface FamilyBranch {
@@ -206,9 +218,12 @@ export async function fetchMyFamily(): Promise<FamilyGraph> {
   }
 
   // 3. Relationships the caller has already tagged on members in this circle.
+  //    gender_hint was added in migration 20260522000020; it may be missing on
+  //    rows tagged before that migration applied — falls back to the target's
+  //    profile.gender for display.
   const { data: relRows, error: relErr } = await supabase
     .from('relationships')
-    .select('to_user_id, relationship_type')
+    .select('to_user_id, relationship_type, gender_hint')
     .eq('circle_id', circleId)
     .eq('from_user_id', uid);
 
@@ -216,9 +231,13 @@ export async function fetchMyFamily(): Promise<FamilyGraph> {
     // eslint-disable-next-line no-console
     console.warn('[supabaseFamily] relationships lookup failed:', relErr.message);
   }
-  const relMap = new Map<string, string>();
+  const relTypeMap = new Map<string, string>();
+  const relGenderHintMap = new Map<string, FamilyMember['genderHint']>();
   for (const r of relRows ?? []) {
-    relMap.set(r.to_user_id as string, r.relationship_type as string);
+    relTypeMap.set(r.to_user_id as string, r.relationship_type as string);
+    if (r.gender_hint) {
+      relGenderHintMap.set(r.to_user_id as string, r.gender_hint as FamilyMember['genderHint']);
+    }
   }
 
   // Build member objects.
@@ -231,8 +250,9 @@ export async function fetchMyFamily(): Promise<FamilyGraph> {
       initials: initialsOf(displayName),
       isImmediate: r.is_immediate,
       invitedViaUserId: r.invited_via_user_id,
-      relationshipType: relMap.get(r.user_id) ?? null,
+      relationshipType: relTypeMap.get(r.user_id) ?? null,
       gender: genderMap.get(r.user_id) ?? null,
+      genderHint: relGenderHintMap.get(r.user_id) ?? null,
     };
   });
 
@@ -323,14 +343,22 @@ export const RELATIONSHIP_LABELS: Array<{
 /**
  * Call the tag_family_relationship RPC. Returns the new immediate-state of the
  * target so the caller can update local UI without refetching everything.
+ *
+ * `genderHint` is optional — pass it when the picker showed a gendered chip
+ * ("Brother", "Mom", …) so the viewer's chosen form is preserved on later
+ * renders, independent of the target's own profile.gender. Skip it for
+ * neutral chips (Cousin, Spouse / partner, In-law, Family friend, Chosen
+ * family).
  */
 export async function tagRelationship(
   memberUserId: string,
   relationshipType: RelationshipType,
+  genderHint: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null = null,
 ): Promise<{ circleId: string; isImmediate: boolean }> {
   const { data, error } = await supabase.rpc('tag_family_relationship', {
     _member_user_id: memberUserId,
     _relationship_type: relationshipType,
+    _gender_hint: genderHint,
   });
   if (error) {
     throw new SupabaseFamilyError(
@@ -350,16 +378,38 @@ export async function tagRelationship(
 }
 
 /**
- * Gender-aware label for a relationship type. When we know the target's
- * gender, prefer the gendered form ("Brother" not "Sibling", "Mom" not
- * "Parent"). Falls back to the neutral label when gender is unknown or
- * the relationship doesn't have a clean gendered form.
+ * Relationship types where we offer gendered chips when the target's gender
+ * isn't otherwise known. The picker uses this set to decide whether to split
+ * the chip into a pair (e.g. "Brother" + "Sister") or keep it neutral.
+ * Spouse, cousin, in-law, family friend, and chosen family stay neutral by
+ * design — their gendered English forms are either redundant or imprecise.
+ */
+export const GENDERED_RELATIONSHIP_TYPES: ReadonlySet<RelationshipType> = new Set([
+  'parent',
+  'child',
+  'sibling',
+  'grandparent',
+  'grandchild',
+  'aunt_uncle',
+  'niece_nephew',
+]);
+
+/**
+ * Gender-aware label for a relationship type. Priority order:
+ *   1. The tagger's own genderHint (their perception, locked in at tag time).
+ *   2. The target's self-declared profile.gender.
+ *   3. Neutral fallback from RELATIONSHIP_LABELS.
+ *
+ * `genderHint` always wins so the viewer's chosen form survives even after
+ * the target later sets their own profile.gender independently.
  */
 export function relationshipLabelFor(
   type: RelationshipType,
   targetGender: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null | undefined,
+  genderHint?: 'female' | 'male' | 'nonbinary' | 'prefer_not' | null,
 ): string {
-  if (targetGender === 'female') {
+  const effective = genderHint ?? targetGender;
+  if (effective === 'female') {
     switch (type) {
       case 'parent':       return 'Mom';
       case 'child':        return 'Daughter';
@@ -370,7 +420,7 @@ export function relationshipLabelFor(
       case 'niece_nephew': return 'Niece';
       default: break;
     }
-  } else if (targetGender === 'male') {
+  } else if (effective === 'male') {
     switch (type) {
       case 'parent':       return 'Dad';
       case 'child':        return 'Son';

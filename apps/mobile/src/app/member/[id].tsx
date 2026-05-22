@@ -1,38 +1,118 @@
-import { useState } from 'react';
-import { useLocalSearchParams, router } from 'expo-router';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import { MEMBERS, MEMORIES_WITH, FEED, type MemberId, type FeedItem } from '../../lib/mockData';
-import { Avatar } from '../../components/Avatar';
-import { comingSoon } from '../../lib/comingSoon';
+import {
+  fetchMyFamily,
+  relationshipLabelFor,
+  type FamilyMember,
+  type RelationshipType,
+} from '../../lib/supabaseFamily';
+import { RelationshipTagModal } from '../../components/RelationshipTagModal';
 
-type ProfileTab = 'timeline' | 'questions' | 'vault' | 'about';
-
-export default function MemberProfile() {
-  const { id } = useLocalSearchParams<{ id: MemberId }>();
+/**
+ * Member profile — `/member/<userId>`.
+ *
+ * This file used to be wired against mockData (MEMBERS[memberId] keyed by
+ * string ids like 'mom'). Every real navigation passes a UUID, so the
+ * lookup returned undefined, accessing `member.name` threw, and the screen
+ * rendered blank — the symptom Aaron hit trying to re-tag his brother as
+ * "Brother." Eight call sites push to this route; every one of them was
+ * blank-screening.
+ *
+ * Scope of this rewrite: enough to unblock that flow. Avatar, name,
+ * relationship label (gender-aware via lib), and a "Change relationship"
+ * button that re-opens the RelationshipTagModal so re-tagging is reachable
+ * from any tile in the app. Shared timeline / questions / vault tabs can
+ * layer on later — the goal here is to stop the crash and let users fix
+ * incorrect relationship tags.
+ */
+export default function MemberProfileScreen() {
   const insets = useSafeAreaInsets();
-  const memberId = (id ?? 'mom') as MemberId;
-  const member = MEMBERS[memberId];
-  const memCount = MEMORIES_WITH[memberId] ?? 0;
-  const theirMemories = FEED.filter((f) => f.authorId === memberId);
-  const [tab, setTab] = useState<ProfileTab>('timeline');
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  function handleTabPress(t: ProfileTab) {
-    if (t === 'timeline') {
-      setTab('timeline');
-    } else if (t === 'questions') {
-      comingSoon('profile_tab_questions');
-    } else if (t === 'vault') {
-      comingSoon('profile_tab_vault');
+  const [member, setMember] = useState<FamilyMember | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) {
+      setError('No member id in the URL.');
+      setLoading(false);
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      // fetchMyFamily returns every family member in the user's primary
+      // circle. We just find the one we want — list is at most a few
+      // dozen rows, way cheaper than maintaining a separate single-member
+      // RPC and easier to keep in sync with display logic.
+      const graph = await fetchMyFamily();
+      const all = [
+        ...graph.immediate,
+        ...graph.branches.flatMap((b) => b.members),
+      ];
+      const found = all.find((m) => m.userId === id) ?? null;
+      if (!found) {
+        setError(
+          "We couldn't find that person in your family. They may have left the circle.",
+        );
+      }
+      setMember(found);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load this profile.');
+      // eslint-disable-next-line no-console
+      console.warn('[member/[id]] fetchMyFamily failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  /**
+   * Called by the modal after a successful tag. Refetch so any derived
+   * state (is_immediate flipping, branch movement, gendered label) stays
+   * in sync with the server rather than getting patched optimistically.
+   */
+  const handleTagged = useCallback(
+    (_memberId: string, _type: RelationshipType, _isImmediate: boolean) => {
+      void load();
+    },
+    [load],
+  );
+
+  const currentRelationshipLabel = useMemo(() => {
+    if (!member?.relationshipType) return null;
+    return relationshipLabelFor(
+      member.relationshipType as RelationshipType,
+      member.gender,
+      member.genderHint,
+    );
+  }, [member?.relationshipType, member?.gender, member?.genderHint]);
+
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
     } else {
-      comingSoon('profile_tab_about');
+      router.replace('/(tabs)/family');
     }
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bgSecondary }}>
-      {/* Header bar */}
+      {/* Header */}
       <View
         style={{
           paddingTop: insets.top + 8,
@@ -41,11 +121,14 @@ export default function MemberProfile() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.color.borderSubtle,
           backgroundColor: tokens.color.bgSecondary,
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
+          hitSlop={12}
           style={({ pressed }) => ({
             width: 40,
             height: 40,
@@ -58,359 +141,198 @@ export default function MemberProfile() {
             opacity: pressed ? 0.5 : 1,
           })}
         >
-          <Text style={{ fontSize: 20, color: tokens.color.textPrimary }}>‹</Text>
+          <Text
+            style={{ fontSize: 20, color: tokens.color.textPrimary, marginTop: -2 }}
+          >
+            ‹
+          </Text>
         </Pressable>
         <Text
-          numberOfLines={1}
-          style={{
-            flex: 1,
-            fontSize: 16,
-            fontWeight: '700',
-            color: tokens.color.textPrimary,
-          }}
+          style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}
         >
-          {member.name}
+          Profile
         </Text>
       </View>
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: 20,
+          paddingTop: 32,
+          paddingHorizontal: 24,
           paddingBottom: insets.bottom + 40,
-          gap: 22,
+          gap: 24,
+          alignItems: 'center',
         }}
       >
-        {/* Profile card */}
-        <View
-          style={{
-            backgroundColor: tokens.color.bgPrimary,
-            borderRadius: 24,
-            padding: 22,
-            alignItems: 'center',
-            gap: 14,
-            shadowColor: '#1A1418',
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 4 },
-          }}
-        >
-          <Avatar member={member} size="xl" />
-          <View style={{ alignItems: 'center' }}>
+        {loading && (
+          <View style={{ paddingVertical: 60, alignItems: 'center', gap: 12 }}>
+            <ActivityIndicator color={tokens.color.accentPrimary} />
+            <Text style={{ color: tokens.color.textMuted, fontSize: 14 }}>
+              Loading profile…
+            </Text>
+          </View>
+        )}
+
+        {!loading && error && (
+          <View
+            style={{
+              backgroundColor: tokens.color.bgPrimary,
+              borderRadius: 16,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: tokens.color.danger + '40',
+              gap: 10,
+              width: '100%',
+            }}
+          >
+            <Text style={{ fontSize: 32 }}>😔</Text>
             <Text
-              style={{
-                fontSize: 26,
-                fontWeight: '700',
-                color: tokens.color.textPrimary,
-              }}
+              style={{ fontSize: 17, fontWeight: '700', color: tokens.color.textPrimary }}
             >
-              {member.name}
+              Couldn't load that profile.
             </Text>
-            <Text style={{ fontSize: 15, color: tokens.color.textMuted, marginTop: 4 }}>
-              {member.relationship}
-              {member.age ? ` · ${member.age}` : ''}
+            <Text
+              style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}
+            >
+              {error}
             </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 24, marginTop: 6 }}>
-            <Stat number={memCount} label="memories" />
-            <Stat number={theirMemories.length || 12} label="answered" />
-            <Stat number={3} label="vault for you" />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
             <Pressable
-              onPress={() =>
-                router.push({ pathname: '/(tabs)/ask', params: { preselect: memberId } })
-              }
+              onPress={load}
               style={({ pressed }) => ({
-                paddingHorizontal: 20,
-                paddingVertical: 12,
+                alignSelf: 'flex-start',
+                marginTop: 4,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
                 backgroundColor: tokens.color.accentPrimary,
                 borderRadius: 999,
-                opacity: pressed ? 0.85 : 1,
+                opacity: pressed ? 0.8 : 1,
               })}
             >
-              <Text style={{ color: 'white', fontWeight: '700' }}>Ask {member.name} something</Text>
+              <Text style={{ color: 'white', fontWeight: '700' }}>Try again</Text>
             </Pressable>
-            <Pressable
-              onPress={() => comingSoon('view_vault_for_me')}
-              style={({ pressed }) => ({
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: tokens.color.bgTinted,
+          </View>
+        )}
+
+        {!loading && !error && member && (
+          <>
+            {/* Avatar */}
+            <View
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                backgroundColor: member.avatarColor + '22',
+                borderWidth: 2,
+                borderColor: member.avatarColor + '66',
                 alignItems: 'center',
                 justifyContent: 'center',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              }}
             >
-              <Text style={{ fontSize: 18 }}>🔒</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Tab strip — for demo just labels, no behavior */}
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: 24,
-            paddingHorizontal: 4,
-            borderBottomWidth: 1,
-            borderBottomColor: tokens.color.borderSubtle,
-          }}
-        >
-          {[
-            { id: 'timeline' as const, label: 'Timeline' },
-            { id: 'questions' as const, label: 'Questions' },
-            { id: 'vault' as const, label: 'Vault for me' },
-            { id: 'about' as const, label: 'About' },
-          ].map((t) => {
-            const active = tab === t.id;
-            return (
-              <Pressable
-                key={t.id}
-                onPress={() => handleTabPress(t.id)}
-                style={{ paddingVertical: 10 }}
+              <Text
+                style={{
+                  color: member.avatarColor,
+                  fontWeight: '700',
+                  fontSize: 40,
+                }}
               >
-                <Text
+                {member.initials}
+              </Text>
+            </View>
+
+            {/* Name + immediate-family badge */}
+            <View style={{ alignItems: 'center', gap: 8 }}>
+              <Text
+                style={{
+                  fontSize: 26,
+                  fontWeight: '700',
+                  color: tokens.color.textPrimary,
+                  textAlign: 'center',
+                }}
+              >
+                {member.displayName}
+              </Text>
+              {member.isImmediate && (
+                <View
                   style={{
-                    fontSize: 14,
-                    fontWeight: active ? '700' : '500',
-                    color: active ? tokens.color.accentPrimary : tokens.color.textMuted,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    backgroundColor: tokens.color.accentPrimary + '15',
+                    borderRadius: 999,
                   }}
                 >
-                  {t.label}
-                </Text>
-                {active && (
-                  <View
+                  <Text
                     style={{
-                      position: 'absolute',
-                      bottom: -1,
-                      left: 0,
-                      right: 0,
-                      height: 2,
-                      backgroundColor: tokens.color.accentPrimary,
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: tokens.color.accentPrimary,
+                      letterSpacing: 0.6,
                     }}
-                  />
-                )}
+                  >
+                    IMMEDIATE FAMILY
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Relationship card with Change button */}
+            <View
+              style={{
+                backgroundColor: tokens.color.bgPrimary,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: tokens.color.borderSubtle,
+                padding: 20,
+                gap: 12,
+                width: '100%',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  letterSpacing: 0.8,
+                  color: tokens.color.textMuted,
+                }}
+              >
+                YOUR RELATIONSHIP
+              </Text>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: '700',
+                  color: currentRelationshipLabel
+                    ? tokens.color.textPrimary
+                    : tokens.color.textMuted,
+                }}
+              >
+                {currentRelationshipLabel ?? 'Not set yet'}
+              </Text>
+              <Pressable
+                onPress={() => setTagModalOpen(true)}
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-start',
+                  marginTop: 4,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  backgroundColor: tokens.color.accentPrimary,
+                  borderRadius: 999,
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>
+                  {currentRelationshipLabel ? 'Change relationship' : 'Set relationship'}
+                </Text>
               </Pressable>
-            );
-          })}
-        </View>
-
-        {/* The story of you & them — AI summary card */}
-        <View
-          style={{
-            padding: 16,
-            backgroundColor: tokens.color.bgTinted,
-            borderRadius: 16,
-            gap: 8,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 12,
-              color: tokens.color.accentPrimary,
-              fontWeight: '700',
-              letterSpacing: 1,
-            }}
-          >
-            STORY SO FAR · WRITTEN BY KIN
-          </Text>
-          <Text style={{ fontSize: 15, color: tokens.color.textPrimary, lineHeight: 22 }}>
-            You've asked {member.name} {Math.max(memCount - 12, 8)} questions this year. Most have
-            been about food, childhood, and what it was like raising you. Their voice notes average
-            47 seconds and there are 4 photos you've never seen before.
-          </Text>
-          <Pressable
-            onPress={() => comingSoon('generate_book')}
-            style={({ pressed }) => ({
-              alignSelf: 'flex-start',
-              marginTop: 4,
-              opacity: pressed ? 0.5 : 1,
-            })}
-          >
-            <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700', fontSize: 13 }}>
-              Generate a book of {member.name}'s answers →
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Section headers + memories */}
-        <SectionHeader title="May 2026" subtitle="A flurry of food memories" />
-        {(theirMemories.length > 0 ? theirMemories : sampleFor(memberId)).map((m) => (
-          <MemoryCard key={m.id} item={m} memberName={member.name} />
-        ))}
-
-        <SectionHeader
-          title="April 2026"
-          subtitle={`${member.relationship} on family traditions`}
-        />
-        {sampleFor(memberId).map((m) => (
-          <MemoryCard key={`p2-${m.id}`} item={m} memberName={member.name} />
-        ))}
+            </View>
+          </>
+        )}
       </ScrollView>
+
+      {/* Re-tag modal. Visible only when the user explicitly opens it. */}
+      <RelationshipTagModal
+        member={tagModalOpen ? member : null}
+        onClose={() => setTagModalOpen(false)}
+        onTagged={handleTagged}
+      />
     </View>
   );
-}
-
-function Stat({ number, label }: { number: number; label: string }) {
-  return (
-    <View style={{ alignItems: 'center' }}>
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: '700',
-          color: tokens.color.textPrimary,
-        }}
-      >
-        {number}
-      </Text>
-      <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>{label}</Text>
-    </View>
-  );
-}
-
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <View style={{ marginTop: 4 }}>
-      <Text style={{ fontSize: 18, fontWeight: '700', color: tokens.color.textPrimary }}>
-        {title}
-      </Text>
-      <Text
-        style={{ fontSize: 13, color: tokens.color.textMuted, marginTop: 2, fontStyle: 'italic' }}
-      >
-        {subtitle}
-      </Text>
-    </View>
-  );
-}
-
-function MemoryCard({ item, memberName }: { item: FeedItem; memberName: string }) {
-  // Sample/synthetic memories have id prefix "sample-" — they don't exist in FEED
-  const isSynthetic = item.id.startsWith('sample-');
-  return (
-    <Pressable
-      onPress={() => (isSynthetic ? comingSoon('open_memory') : router.push(`/memory/${item.id}`))}
-      style={({ pressed }) => ({
-        backgroundColor: tokens.color.bgPrimary,
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: tokens.color.borderSubtle,
-        opacity: pressed ? 0.85 : 1,
-      })}
-    >
-      <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>
-        {item.whenAgo}
-        {item.relatedToName ? ` · answered ${item.relatedToName}` : ''}
-      </Text>
-      <Text
-        style={{
-          marginTop: 8,
-          fontSize: 16,
-          lineHeight: 24,
-          color: tokens.color.textPrimary,
-        }}
-      >
-        {item.body}
-      </Text>
-      {(item.mediaKind === 'voice' || item.mediaKind === 'video') && (
-        <View
-          style={{
-            marginTop: 12,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            backgroundColor: tokens.color.bgTinted,
-            borderRadius: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: tokens.color.accentPrimary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 14 }}>▶</Text>
-          </View>
-          <Text style={{ fontSize: 13, color: tokens.color.textSecondary }}>
-            {item.mediaKind === 'video' ? 'Video' : 'Voice'} ·{' '}
-            {Math.floor((item.durationSec ?? 60) / 60)}:
-            {String((item.durationSec ?? 60) % 60).padStart(2, '0')}
-          </Text>
-        </View>
-      )}
-      {item.mediaKind === 'photo' && (
-        <View
-          style={{
-            marginTop: 12,
-            height: 140,
-            borderRadius: 12,
-            backgroundColor: item.photoTint ?? tokens.color.bgTinted,
-          }}
-        />
-      )}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-        {item.appearsIn.map((t) => (
-          <View
-            key={t}
-            style={{
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              backgroundColor: tokens.color.bgTinted,
-              borderRadius: 6,
-            }}
-          >
-            <Text style={{ fontSize: 11, color: tokens.color.accentPrimary, fontWeight: '600' }}>
-              {t}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </Pressable>
-  );
-}
-
-// Fallback samples for members who don't have feed items yet
-function sampleFor(id: MemberId): FeedItem[] {
-  const m = MEMBERS[id];
-  const baseAppears = [`${m.name}'s timeline`, `You ↔ ${m.name}`];
-  return [
-    {
-      id: `sample-${id}-1`,
-      branchId: 'pilks',
-      authorId: id,
-      kind: 'answer',
-      body: 'I remember the day you were born like it was yesterday. The light through the window was strange — almost gold. I knew immediately you were going to be okay.',
-      mediaKind: 'voice',
-      durationSec: 73,
-      relatedToName: 'Aaron',
-      visibility: 'just_us',
-      topic: 'Love',
-      reactions: 4,
-      comments: 1,
-      whenAgo: '2 weeks ago',
-      appearsIn: [...baseAppears, 'Love'],
-    },
-    {
-      id: `sample-${id}-2`,
-      branchId: 'pilks',
-      authorId: id,
-      kind: 'answer',
-      body: 'Every Christmas Eve we made pierogis from scratch. Your grandmother would put me on the rolling pin. I hated it then. I miss it now.',
-      mediaKind: 'text',
-      relatedToName: 'Aaron',
-      visibility: 'just_us',
-      topic: 'Holidays',
-      reactions: 2,
-      comments: 0,
-      whenAgo: '3 weeks ago',
-      appearsIn: [...baseAppears, 'Holidays', 'Family traditions'],
-    },
-  ];
 }

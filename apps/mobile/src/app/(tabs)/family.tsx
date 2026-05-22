@@ -34,9 +34,11 @@ import { DEMO_PEOPLE_LIST, demoMembersAsExtended, eventsFromDemo } from '../../l
 import { useProfile, initialsOf } from '../../lib/useProfile';
 import {
   fetchMyFamily,
+  relationshipLabelFor,
   type FamilyBranch,
   type FamilyGraph,
   type FamilyMember,
+  type RelationshipType,
 } from '../../lib/supabaseFamily';
 import { RelationshipTagModal } from '../../components/RelationshipTagModal';
 import { showDemoAlert } from '../../lib/demoGuard';
@@ -889,7 +891,7 @@ function ImmediateAvatarTile({ member }: { member: FamilyMember }) {
             textAlign: 'center',
           }}
         >
-          {prettyRelationship(member.relationshipType)}
+          {prettyRelationship(member.relationshipType, member.gender, member.genderHint)}
         </Text>
       )}
     </Pressable>
@@ -1073,7 +1075,7 @@ function BranchDisclosureRow({ branch }: { branch: FamilyBranch }) {
                 </Text>
                 {m.relationshipType && (
                   <Text style={{ fontSize: 11, color: tokens.color.textMuted, marginTop: 1 }}>
-                    {prettyRelationship(m.relationshipType)}
+                    {prettyRelationship(m.relationshipType, m.gender, m.genderHint)}
                   </Text>
                 )}
               </View>
@@ -1086,35 +1088,18 @@ function BranchDisclosureRow({ branch }: { branch: FamilyBranch }) {
   );
 }
 
-function prettyRelationship(type: string): string {
-  switch (type) {
-    case 'parent':
-      return 'Parent';
-    case 'child':
-      return 'Child';
-    case 'grandparent':
-      return 'Grandparent';
-    case 'grandchild':
-      return 'Grandchild';
-    case 'sibling':
-      return 'Sibling';
-    case 'spouse':
-      return 'Spouse';
-    case 'aunt_uncle':
-      return 'Aunt / uncle';
-    case 'niece_nephew':
-      return 'Niece / nephew';
-    case 'cousin':
-      return 'Cousin';
-    case 'in_law':
-      return 'In-law';
-    case 'family_friend':
-      return 'Family friend';
-    case 'chosen_family':
-      return 'Chosen family';
-    default:
-      return 'Family';
-  }
+/**
+ * Display label for a member's relationship. Defers to the lib's
+ * relationshipLabelFor so the gendered form ("Brother", "Mom") wins when we
+ * have the viewer's gender hint or the target's own profile gender.
+ */
+function prettyRelationship(
+  type: string,
+  gender?: FamilyMember['gender'],
+  genderHint?: FamilyMember['genderHint'],
+): string {
+  if (!type) return 'Family';
+  return relationshipLabelFor(type as RelationshipType, gender ?? null, genderHint ?? null);
 }
 
 function MemberRow({

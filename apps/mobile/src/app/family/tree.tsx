@@ -36,8 +36,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import {
   fetchMyFamily,
+  relationshipLabelFor,
   type FamilyGraph,
   type FamilyMember,
+  type RelationshipType,
 } from '../../lib/supabaseFamily';
 import { RelationshipTagModal } from '../../components/RelationshipTagModal';
 import { useHasFamily } from '../../lib/useHasFamily';
@@ -90,35 +92,18 @@ function tierLabel(t: Tier): string {
   }
 }
 
-function relationshipShort(type: string | null): string {
-  switch (type) {
-    case 'parent':
-      return 'Parent';
-    case 'child':
-      return 'Child';
-    case 'grandparent':
-      return 'Grandparent';
-    case 'grandchild':
-      return 'Grandchild';
-    case 'sibling':
-      return 'Sibling';
-    case 'spouse':
-      return 'Spouse';
-    case 'aunt_uncle':
-      return 'Aunt / uncle';
-    case 'niece_nephew':
-      return 'Niece / nephew';
-    case 'cousin':
-      return 'Cousin';
-    case 'in_law':
-      return 'In-law';
-    case 'family_friend':
-      return 'Family friend';
-    case 'chosen_family':
-      return 'Chosen family';
-    default:
-      return '';
-  }
+/**
+ * Display label for a tagged relationship. Defers to the lib's
+ * relationshipLabelFor so the gendered form ("Brother", "Mom") wins when
+ * the tagger left a gender_hint or the target has a profile gender set.
+ */
+function relationshipShort(
+  type: string | null,
+  gender?: FamilyMember['gender'],
+  genderHint?: FamilyMember['genderHint'],
+): string {
+  if (!type) return '';
+  return relationshipLabelFor(type as RelationshipType, gender ?? null, genderHint ?? null);
 }
 
 /**
@@ -575,7 +560,7 @@ function PersonTile({ member }: { member: FamilyMember }) {
             textAlign: 'center',
           }}
         >
-          {relationshipShort(member.relationshipType)}
+          {relationshipShort(member.relationshipType, member.gender, member.genderHint)}
         </Text>
       )}
     </Pressable>

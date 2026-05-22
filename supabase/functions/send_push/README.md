@@ -20,7 +20,16 @@ supabase secrets set \
   VAPID_PRIVATE_KEY='<paste privateKey here>' \
   VAPID_SUBJECT='mailto:hello@famlinkapp.com'
 
-# 3. Deploy the function.
+# 3. Deploy the function. JWT verify is OFF (set in supabase/config.toml
+#    under [functions.send_push]) because FamLink is on the new
+#    sb_publishable_/sb_secret_ API key system — the auto-injected
+#    SUPABASE_SERVICE_ROLE_KEY is an sb_secret_... string, not a JWT, and
+#    the edge gateway rejects non-JWT bearers when verify is on. The
+#    function still authenticates the caller itself by comparing the
+#    bearer to SUPABASE_SERVICE_ROLE_KEY. See:
+#    - supabase/config.toml [functions.send_push] verify_jwt = false
+#    - supabase/migrations/20260522000018_push_helper_vault.sql
+#    - WEB-PUSH-DEPLOY.md step 5
 supabase functions deploy send_push
 
 # 4. Expose the same publicKey to the client (Vercel env var):
@@ -31,11 +40,14 @@ supabase functions deploy send_push
 
 ## How it's called
 
-- **From Postgres triggers** (`20260522000017_push_triggers.sql`) — via
-  `pg_net.http_post` using the SERVICE_ROLE_KEY as the bearer. This is the
-  primary code path.
+- **From Postgres triggers** (`20260522000017_push_triggers.sql` defines the
+  triggers; `20260522000018_push_helper_vault.sql` defines the helper) — via
+  `net.http_post` using the Vault-stored service role secret as the bearer.
+  This is the primary code path.
 - **From the client** (rare; used for test pings) — with the signed-in user's
   JWT. The function only allows the user to send to themselves in that case.
+  Note: on new-key projects, the client must still send a valid JWT (i.e. the
+  user's access token), not a `sb_secret_` value.
 
 ## Body schema
 
@@ -52,17 +64,24 @@ The function returns `{ ok, sent, removed, failures }`. `removed` reflects
 subscriptions that returned HTTP 404 or 410 (Gone) — those are pruned from
 the table automatically.
 
-## Local test
+## Test
 
-```bash
-# After deploy, with the user already signed in on famlinkapp.com:
-curl -X POST "$SUPABASE_URL/functions/v1/send_push" \
-  -H "Authorization: Bearer $SUPABASE_USER_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "<your-uuid>",
-    "title": "FamLink test",
-    "body": "If you see this, push works.",
-    "url": "/"
-  }'
+Prefer the SQL helper — it's the same path a real trigger takes:
+
+```sql
+select public.send_push_notification(
+  (select id from auth.users where email = '<you@example.com>'),
+  'FamLink',
+  'Test push',
+  '/'
+);
+
+-- wait a second for pg_net to process, then:
+select status_code, content, created
+from net._http_response
+order by created desc
+limit 1;
 ```
+
+200 + your device pings = success. Non-200 troubleshooting in
+[WEB-PUSH-DEPLOY.md](../../../WEB-PUSH-DEPLOY.md) step 8.

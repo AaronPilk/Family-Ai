@@ -12,8 +12,9 @@ import { OnboardingDots, PrimaryButton, SecondaryLink } from './_shared';
  * The `onboarding_completed = true` flip used to live here; it moved to the
  * install screen so the gate doesn't bypass install coaching.
  *
- * "Invite your family" pushes /invite (the real SMS/email screen) and we
- * trust the user to use the back button to return to the install step.
+ * "Invite your family" pushes /invite (the real multi-recipient SMS screen,
+ * chip-based — see apps/mobile/src/app/invite/index.tsx) and we trust the
+ * user to use the back button to return to the install step.
  * The install screen is also reachable directly via /onboarding/install if
  * the user manages to land at a tab without it (the root gate handles that
  * via onboarding_completed).
@@ -82,8 +83,8 @@ export default function OnboardingInviteOrSkip() {
           }}
         >
           <Text style={{ fontSize: 15, color: tokens.color.textSecondary, lineHeight: 21 }}>
-            We'll send a soft text or email — no app required. They can join when they're ready, on
-            their own time.
+            Add everyone in one go — Mom, Dad, your siblings, grandparents. We'll text each
+            of them a one-tap join link. No app required. They can join when they're ready.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
             <InviteSuggestionPill label="Mom" />
