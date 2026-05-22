@@ -17,6 +17,7 @@ import { useHasFamily } from '../../lib/useHasFamily';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { eventsFromDemo, demoMemberDisplay } from '../../lib/demoData';
 import { showDemoAlert } from '../../lib/demoGuard';
+import { getCachedDisplayName } from '../../lib/supabaseEvents';
 
 /**
  * Chats tab — every active group chat in one place. For v0 each row is an
@@ -245,9 +246,18 @@ function lastMessage(e: FamilyEvent): MomentMessage | undefined {
 }
 
 function messagePreview(m: MomentMessage): string {
-  const demo = demoMemberDisplay(m.authorId as AnyMemberId);
-  const author = MEMBERS[m.authorId as MemberId];
-  const name = demo?.name ?? (author ? author.name : getAnyMember(m.authorId).name);
+  // Name resolution priority:
+  //   1. demoMemberDisplay — only when the event is from eventsFromDemo()
+  //   2. profileCache (real Supabase profile display_name)
+  //   3. mock MEMBERS lookup (legacy demo memberIds like 'mom' / 'dad')
+  //   4. "Someone" fallback if all three miss
+  // Skip the mock lookup entirely for real UUID-shaped ids so we don't
+  // accidentally return undefined or crash on getAnyMember.
+  const isRealUuid = typeof m.authorId === 'string' && /^[0-9a-f-]{36}$/i.test(m.authorId);
+  const demo = isRealUuid ? undefined : demoMemberDisplay(m.authorId as AnyMemberId);
+  const cached = isRealUuid ? getCachedDisplayName(m.authorId as never) : undefined;
+  const author = isRealUuid ? undefined : MEMBERS[m.authorId as MemberId];
+  const name = demo?.name ?? cached ?? author?.name ?? 'Someone';
   const prefix = m.authorId === ME ? 'You' : name;
   return `${prefix}: ${m.body}`;
 }
