@@ -241,6 +241,40 @@ export default function FamilyScreen() {
           <Text style={{ fontSize: 22, color: 'white' }}>›</Text>
         </Pressable>
 
+        {/* Family tree — always visible. Even solo users can open it to see
+            their YOU tile and the "Your tree starts here" empty state, which
+            telegraphs how the feature works before the graph fills in. */}
+        <Pressable
+          onPress={() => router.push('/family/tree')}
+          accessibilityRole="button"
+          accessibilityLabel="View family tree"
+          style={({ pressed }) => ({
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: tokens.color.bgTinted,
+            borderWidth: 1,
+            borderColor: tokens.color.accentPrimary + '30',
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 14 }}>🌳</Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: tokens.color.accentPrimary,
+            }}
+          >
+            View family tree
+          </Text>
+          <Text style={{ fontSize: 14, color: tokens.color.accentPrimary }}>›</Text>
+        </Pressable>
+
         {/* Letters — quiet entry point. Letters are a private surface; we
             intentionally don't promote them on the main tab bar. */}
         <Pressable

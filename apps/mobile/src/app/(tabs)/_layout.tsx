@@ -3,9 +3,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { tokens } from '../../theme/tokens';
 
 /**
- * 6-tab bottom bar: Home / Ask / Vault / Events / Chats / Family.
- * Vault is back on the bar — it's load-bearing for the proof-of-life flow.
- * Timeline moved off the bar (accessed from Family → "Timeline").
+ * 6-tab bottom bar: Home / Ask / Tree / Events / Chats / Family.
+ *
+ * Vault was on the bar but got pulled — it's a quiet, occasional surface
+ * (proof-of-life is high-stakes but low-frequency). Reaching Vault now goes
+ * Family tab → Vault card. The tab slot freed up belongs to Family Tree, a
+ * read-only generational view that gets opened more often once the graph
+ * starts filling in.
+ *
  * Chats is the messaging hub — one row per event group chat for v0.
  */
 export default function TabsLayout() {
@@ -44,12 +49,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="tree"
+        options={{
+          title: 'Tree',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="git-network-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* Vault is intentionally NOT a tab. Reach it from Family → Vault card. */}
+      <Tabs.Screen
         name="vault"
         options={{
-          title: 'Vault',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="lock-closed-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
