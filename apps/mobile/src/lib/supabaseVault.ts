@@ -406,11 +406,17 @@ export async function revokeRelease(releaseId: string): Promise<void> {
 export interface FamilyMemberOption {
   userId: string;
   displayName: string;
+  /** True when the viewer has tagged this member as inner-ring (parent, sibling, …). */
+  isImmediate: boolean;
 }
 
 /**
  * List every OTHER active member of the current user's primary family circle,
  * used to populate the recipient picker on the release screen.
+ *
+ * Each option carries an `isImmediate` flag so the picker can default to the
+ * inner ring (the typical Vault audience) and reveal extended members behind
+ * a toggle.
  *
  * Returns [] if the user isn't in a circle, or if they're the only member.
  */
@@ -434,7 +440,7 @@ export async function listFamilyMembersForRelease(): Promise<FamilyMemberOption[
 
   const { data: others, error: othersErr } = await supabase
     .from('family_memberships')
-    .select('user_id')
+    .select('user_id, is_immediate')
     .eq('circle_id', circleId)
     .neq('user_id', uid)
     .is('removed_at', null);
@@ -442,8 +448,14 @@ export async function listFamilyMembersForRelease(): Promise<FamilyMemberOption[
   if (othersErr) {
     throw new SupabaseVaultError('Could not list family members.', othersErr);
   }
-  const otherIds = (others ?? []).map((r) => r.user_id as string);
-  if (otherIds.length === 0) return [];
+  const otherRows = (others ?? []) as Array<{ user_id: string; is_immediate: boolean }>;
+  if (otherRows.length === 0) return [];
+
+  const otherIds = otherRows.map((r) => r.user_id);
+  const immediateMap = new Map<string, boolean>();
+  for (const r of otherRows) {
+    immediateMap.set(r.user_id, !!r.is_immediate);
+  }
 
   const { data: profileRows, error: profileErr } = await supabase
     .from('profiles')
@@ -454,7 +466,11 @@ export async function listFamilyMembersForRelease(): Promise<FamilyMemberOption[
     // Soft-fail: still return ids with generic display names so the UI works.
     // eslint-disable-next-line no-console
     console.warn('[supabaseVault] profiles fetch failed:', profileErr.message);
-    return otherIds.map((id) => ({ userId: id, displayName: 'Family member' }));
+    return otherIds.map((id) => ({
+      userId: id,
+      displayName: 'Family member',
+      isImmediate: immediateMap.get(id) ?? false,
+    }));
   }
 
   const names = new Map<string, string>();
@@ -464,6 +480,7 @@ export async function listFamilyMembersForRelease(): Promise<FamilyMemberOption[
   return otherIds.map((id) => ({
     userId: id,
     displayName: names.get(id) ?? 'Family member',
+    isImmediate: immediateMap.get(id) ?? false,
   }));
 }
 

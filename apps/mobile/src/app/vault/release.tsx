@@ -9,7 +9,7 @@
  * Confirm dialog: "After this, they'll see everything you've added so far. You
  * can't take it back, only stop adding more."
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   View,
@@ -41,6 +42,10 @@ export default function ReleaseVaultScreen() {
   const [recipientKind, setRecipientKind] = useState<RecipientKind>('member');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState('');
+  // Vault is heavy content — default the picker to immediate family only.
+  // Toggle reveals extended members for the rare case the user wants to
+  // release to an aunt or cousin.
+  const [includeExtended, setIncludeExtended] = useState(false);
 
   const [condition, setCondition] = useState<Condition>('now');
   const [unlockDateDraft, setUnlockDateDraft] = useState(''); // YYYY-MM-DD
@@ -73,6 +78,23 @@ export default function ReleaseVaultScreen() {
       setSelectedMemberId(null);
     }
   }, [condition, recipientKind]);
+
+  // Default the picker to immediate family; extended is opt-in. If the user
+  // has NO immediate family yet (likely on day-one), fall back to showing
+  // everyone so the picker isn't mysteriously empty.
+  const hasImmediate = useMemo(
+    () => (members ?? []).some((m) => m.isImmediate),
+    [members],
+  );
+  const hasExtendedAvailable = useMemo(
+    () => (members ?? []).some((m) => !m.isImmediate),
+    [members],
+  );
+  const visibleMembers = useMemo<FamilyMemberOption[] | null>(() => {
+    if (!members) return null;
+    if (includeExtended || !hasImmediate) return members;
+    return members.filter((m) => m.isImmediate);
+  }, [members, includeExtended, hasImmediate]);
 
   const canSubmit = (() => {
     if (submitting) return false;
@@ -232,10 +254,22 @@ export default function ReleaseVaultScreen() {
 
           {recipientKind === 'member' ? (
             <MemberPicker
-              members={members}
+              members={visibleMembers}
               error={membersError}
               selectedId={selectedMemberId}
               onPick={setSelectedMemberId}
+              hasExtended={hasExtendedAvailable}
+              includeExtended={includeExtended}
+              onToggleExtended={(v) => {
+                setIncludeExtended(v);
+                // If turning off extended and the current pick is extended, clear it.
+                if (!v) {
+                  const cur = members?.find((m) => m.userId === selectedMemberId);
+                  if (cur && !cur.isImmediate) {
+                    setSelectedMemberId(null);
+                  }
+                }
+              }}
             />
           ) : (
             <TextInput
@@ -398,11 +432,17 @@ function MemberPicker({
   error,
   selectedId,
   onPick,
+  hasExtended,
+  includeExtended,
+  onToggleExtended,
 }: {
   members: FamilyMemberOption[] | null;
   error: string | null;
   selectedId: string | null;
   onPick: (id: string) => void;
+  hasExtended: boolean;
+  includeExtended: boolean;
+  onToggleExtended: (next: boolean) => void;
 }) {
   if (error) {
     return (
@@ -481,12 +521,69 @@ function MemberPicker({
             <Text style={{ flex: 1, fontSize: 15, color: tokens.color.textPrimary }}>
               {m.displayName}
             </Text>
+            {m.isImmediate && (
+              <View
+                style={{
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  backgroundColor: tokens.color.accentPrimary + '18',
+                  borderRadius: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: tokens.color.accentPrimary,
+                    fontWeight: '700',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  IMMEDIATE
+                </Text>
+              </View>
+            )}
             {selected && (
               <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700' }}>✓</Text>
             )}
           </Pressable>
         );
       })}
+      {hasExtended && (
+        <View
+          style={{
+            marginTop: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            backgroundColor: tokens.color.bgTinted,
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: tokens.color.textPrimary,
+              }}
+            >
+              Include extended family
+            </Text>
+            <Text
+              style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}
+            >
+              Aunts, cousins, in-laws. Most Vault releases stay in the inner ring.
+            </Text>
+          </View>
+          <Switch
+            value={includeExtended}
+            onValueChange={onToggleExtended}
+            trackColor={{ true: tokens.color.accentPrimary, false: '#D0CACC' }}
+          />
+        </View>
+      )}
     </View>
   );
 }

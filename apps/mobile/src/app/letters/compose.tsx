@@ -12,6 +12,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   View,
@@ -37,6 +38,9 @@ export default function LettersCompose() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Letters default to immediate family (heavy content). Toggle inside the
+  // picker modal reveals extended members.
+  const [includeExtended, setIncludeExtended] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -211,6 +215,8 @@ export default function LettersCompose() {
           setPickerOpen(false);
         }}
         onClose={() => setPickerOpen(false)}
+        includeExtended={includeExtended}
+        onToggleExtended={setIncludeExtended}
       />
 
       <ConfirmModal
@@ -341,12 +347,23 @@ function RecipientPickerModal({
   candidates,
   onPick,
   onClose,
+  includeExtended,
+  onToggleExtended,
 }: {
   visible: boolean;
   candidates: LetterRecipientCandidate[] | null;
   onPick: (c: LetterRecipientCandidate) => void;
   onClose: () => void;
+  includeExtended: boolean;
+  onToggleExtended: (next: boolean) => void;
 }) {
+  const all = candidates ?? [];
+  const hasImmediate = all.some((c) => c.isImmediate);
+  const hasExtended = all.some((c) => !c.isImmediate);
+  // If the user has no immediate-tagged candidates, show everyone so the
+  // picker isn't mysteriously empty on day one.
+  const visibleCandidates =
+    includeExtended || !hasImmediate ? all : all.filter((c) => c.isImmediate);
   return (
     <Modal
       visible={visible}
@@ -375,7 +392,7 @@ function RecipientPickerModal({
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-          {(candidates ?? []).map((c) => (
+          {visibleCandidates.map((c) => (
             <Pressable
               key={c.userId}
               onPress={() => onPick(c)}
@@ -387,13 +404,80 @@ function RecipientPickerModal({
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 opacity: pressed ? 0.7 : 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
               })}
             >
-              <Text style={{ fontSize: 16, fontWeight: '600', color: tokens.color.textPrimary }}>
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: tokens.color.textPrimary,
+                }}
+              >
                 {c.displayName}
               </Text>
+              {c.isImmediate && (
+                <View
+                  style={{
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    backgroundColor: tokens.color.accentPrimary + '18',
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      color: tokens.color.accentPrimary,
+                      fontWeight: '700',
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    IMMEDIATE
+                  </Text>
+                </View>
+              )}
             </Pressable>
           ))}
+          {hasExtended && (
+            <View
+              style={{
+                marginTop: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                backgroundColor: tokens.color.bgTinted,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: tokens.color.textPrimary,
+                  }}
+                >
+                  Include extended family
+                </Text>
+                <Text
+                  style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}
+                >
+                  Aunts, cousins, in-laws. Most letters stay in the inner ring.
+                </Text>
+              </View>
+              <Switch
+                value={includeExtended}
+                onValueChange={onToggleExtended}
+                trackColor={{ true: tokens.color.accentPrimary, false: '#D0CACC' }}
+              />
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>

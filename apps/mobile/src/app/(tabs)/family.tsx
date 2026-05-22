@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, ScrollView, View, Text, Pressable, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +32,13 @@ import { useIsDevUser } from '../../lib/useIsDevUser';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { DEMO_PEOPLE_LIST, demoMembersAsExtended, eventsFromDemo } from '../../lib/demoData';
 import { useProfile, initialsOf } from '../../lib/useProfile';
+import {
+  fetchMyFamily,
+  type FamilyBranch,
+  type FamilyGraph,
+  type FamilyMember,
+} from '../../lib/supabaseFamily';
+import { RelationshipTagModal } from '../../components/RelationshipTagModal';
 
 export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
@@ -53,6 +60,49 @@ export default function FamilyScreen() {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Real-mode family graph (immediate + branches + untagged queue).
+  const [graph, setGraph] = useState<FamilyGraph | null>(null);
+  const [tagQueue, setTagQueue] = useState<FamilyMember[]>([]);
+  const [currentTagTarget, setCurrentTagTarget] = useState<FamilyMember | null>(null);
+
+  const reloadGraph = useCallback(async () => {
+    if (!hasFamily) {
+      setGraph(null);
+      setTagQueue([]);
+      setCurrentTagTarget(null);
+      return;
+    }
+    try {
+      const g = await fetchMyFamily();
+      setGraph(g);
+      // Replace the queue on each reload. Don't auto-pop the modal here —
+      // showing it only when the user is on the tab is the parent's job;
+      // we just stage members so the user can dismiss the surfacing card.
+      setTagQueue(g.untagged);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[family] fetchMyFamily failed:', e);
+      setGraph({ circleId: null, immediate: [], branches: [], untagged: [] });
+      setTagQueue([]);
+    }
+  }, [hasFamily]);
+
+  useEffect(() => {
+    void reloadGraph();
+  }, [reloadGraph]);
+
+  // Advance the queue when the current target closes.
+  const advanceTagQueue = useCallback(() => {
+    setCurrentTagTarget(null);
+    // After close, pop the head off the queue. The component re-renders and
+    // the user can tap the next surfaced card if they want to keep going.
+    setTagQueue((q) => q.slice(1));
+  }, []);
+
+  const openNextTagTarget = useCallback(() => {
+    setCurrentTagTarget(tagQueue[0] ?? null);
+  }, [tagQueue]);
 
   // Members across in-scope branches, deduped, excluding 'me'
   const memberIds = Array.from(new Set(scopedIds.flatMap((bid) => BRANCHES[bid].memberIds))).filter(
@@ -266,89 +316,212 @@ export default function FamilyScreen() {
           </Section>
         )}
 
-        {/* Immediate family — the inner ring (used by Ask, Timeline, Vault) */}
-        <Section title="Immediate family">
-          <Text
-            style={{
-              fontSize: 12,
-              color: tokens.color.textMuted,
-              lineHeight: 18,
-              paddingHorizontal: 4,
-              marginTop: -4,
-              marginBottom: 4,
-            }}
+        {/* "Who is this to you?" surfacing card — only when we have queued
+            untagged members AND the user is on this tab. Tapping kicks off
+            the modal. We don't auto-open on mount so we're not annoying. */}
+        {hasFamily && tagQueue.length > 0 && !currentTagTarget && (
+          <Pressable
+            onPress={openNextTagTarget}
+            style={({ pressed }) => ({
+              backgroundColor: tokens.color.bgTinted,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: tokens.color.accentPrimary + '33',
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
-            The people you ask questions of and build long-term memory with. Mom, Dad, siblings,
-            grandparents. Not cousins.
-          </Text>
-          <MemberRow memberId="me" subtitleOverride="You" />
-          {immediateIds.map((id) => (
-            <MemberRow key={id} memberId={id} showBranch={sel === 'all'} immediate />
-          ))}
-          {otherCoreIds.length > 0 && (
-            <>
-              {otherCoreIds.map((id) => (
-                <MemberRow key={id} memberId={id} showBranch={sel === 'all'} />
-              ))}
-            </>
-          )}
-          {immediateIds.length === 0 && otherCoreIds.length === 0 && (
-            <View
-              style={{
-                backgroundColor: tokens.color.bgTinted,
-                borderRadius: 14,
-                padding: 14,
-                gap: 6,
-              }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: tokens.color.textPrimary }}>
-                Add immediate family — coming next
+            <Text style={{ fontSize: 24 }}>👋</Text>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: tokens.color.textPrimary,
+                }}
+              >
+                {tagQueue.length === 1
+                  ? `Tag ${tagQueue[0].displayName}`
+                  : `Tag ${tagQueue.length} new family members`}
               </Text>
-              <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
-                For now, invite people through an event (reunion, vacation, gathering) on the Events
-                tab. The "add to family tree" flow lands in the next update.
+              <Text
+                style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}
+              >
+                Help FamLink know who's in your inner ring vs. extended.
               </Text>
             </View>
-          )}
-        </Section>
+            <Text style={{ fontSize: 22, color: tokens.color.accentPrimary }}>›</Text>
+          </Pressable>
+        )}
 
-        {/* Extended family — the outer ring (used for events) */}
-        {extendedList.length > 0 && (
-          <Section title={hasFamily ? 'Extended family & guests' : 'Demo family (preview)'}>
-            <Text
-              style={{
-                fontSize: 12,
-                color: tokens.color.textMuted,
-                lineHeight: 18,
-                paddingHorizontal: 4,
-                marginTop: -4,
-                marginBottom: 4,
-              }}
-            >
-              {hasFamily
-                ? 'Aunts, uncles, cousins, in-laws, and family friends. They show up in your invite list for reunions and vacations. Add someone once — they\'re in your family tree forever.'
-                : 'This is what your family tree could look like. Invite real people to replace this preview.'}
-            </Text>
-            {extendedList.map((m) => (
-              <ExtendedMemberRowInline key={m.id} member={m} demo={!hasFamily && DEMO_PEOPLE_LIST.some((d) => (d.id as string) === (m.id as string))} />
-            ))}
-            <Pressable
-              onPress={() => comingSoon('invite_extended')}
-              style={({ pressed }) => ({
-                marginTop: 4,
-                paddingHorizontal: 18,
-                paddingVertical: 12,
-                alignSelf: 'flex-start',
-                backgroundColor: tokens.color.bgTinted,
-                borderRadius: 999,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600' }}>
-                + Add to family tree
+        {/* ============================================================== */}
+        {/* REAL MODE — graph-driven immediate + branches                 */}
+        {/* ============================================================== */}
+        {hasFamily && graph && (
+          <>
+            {/* Your family — inner ring (avatar row) */}
+            <Section title="Your family">
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: tokens.color.textMuted,
+                  lineHeight: 18,
+                  paddingHorizontal: 4,
+                  marginTop: -4,
+                  marginBottom: 4,
+                }}
+              >
+                The people you build long-term memory with — parents, siblings, spouse,
+                grandparents. Default audience for Vault releases and Letters.
               </Text>
-            </Pressable>
-          </Section>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 14, paddingVertical: 8, paddingHorizontal: 2 }}
+              >
+                {graph.immediate.map((m) => (
+                  <ImmediateAvatarTile key={m.userId} member={m} />
+                ))}
+                <AddImmediateTile
+                  hasExtended={graph.branches.length > 0 || tagQueue.length > 0}
+                  onPress={openNextTagTarget}
+                />
+              </ScrollView>
+              {graph.immediate.length === 0 && (
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: tokens.color.textSecondary,
+                    lineHeight: 19,
+                    paddingHorizontal: 4,
+                  }}
+                >
+                  Tag someone as parent, sibling, spouse, or grandparent to start your inner
+                  ring.
+                </Text>
+              )}
+            </Section>
+
+            {/* Extended family — branches grouped by inviter */}
+            {graph.branches.length > 0 && (
+              <Section title="Extended family">
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: tokens.color.textMuted,
+                    lineHeight: 18,
+                    paddingHorizontal: 4,
+                    marginTop: -4,
+                    marginBottom: 4,
+                  }}
+                >
+                  Grouped by who invited them. Default audience for Events and group chat.
+                </Text>
+                {graph.branches.map((b) => (
+                  <BranchDisclosureRow key={b.viaUserId} branch={b} />
+                ))}
+              </Section>
+            )}
+          </>
+        )}
+
+        {/* ============================================================== */}
+        {/* DEMO MODE — keep the old mock-data sections untouched          */}
+        {/* ============================================================== */}
+        {!hasFamily && (
+          <>
+            {/* Immediate family — the inner ring (used by Ask, Timeline, Vault) */}
+            <Section title="Immediate family">
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: tokens.color.textMuted,
+                  lineHeight: 18,
+                  paddingHorizontal: 4,
+                  marginTop: -4,
+                  marginBottom: 4,
+                }}
+              >
+                The people you ask questions of and build long-term memory with. Mom, Dad, siblings,
+                grandparents. Not cousins.
+              </Text>
+              <MemberRow memberId="me" subtitleOverride="You" />
+              {immediateIds.map((id) => (
+                <MemberRow key={id} memberId={id} showBranch={sel === 'all'} immediate />
+              ))}
+              {otherCoreIds.length > 0 && (
+                <>
+                  {otherCoreIds.map((id) => (
+                    <MemberRow key={id} memberId={id} showBranch={sel === 'all'} />
+                  ))}
+                </>
+              )}
+              {immediateIds.length === 0 && otherCoreIds.length === 0 && (
+                <View
+                  style={{
+                    backgroundColor: tokens.color.bgTinted,
+                    borderRadius: 14,
+                    padding: 14,
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: tokens.color.textPrimary }}>
+                    Add immediate family — coming next
+                  </Text>
+                  <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
+                    For now, invite people through an event (reunion, vacation, gathering) on the
+                    Events tab. The "add to family tree" flow lands in the next update.
+                  </Text>
+                </View>
+              )}
+            </Section>
+
+            {/* Extended family — the outer ring (used for events) */}
+            {extendedList.length > 0 && (
+              <Section title="Demo family (preview)">
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: tokens.color.textMuted,
+                    lineHeight: 18,
+                    paddingHorizontal: 4,
+                    marginTop: -4,
+                    marginBottom: 4,
+                  }}
+                >
+                  This is what your family tree could look like. Invite real people to replace this
+                  preview.
+                </Text>
+                {extendedList.map((m) => (
+                  <ExtendedMemberRowInline
+                    key={m.id}
+                    member={m}
+                    demo={DEMO_PEOPLE_LIST.some((d) => (d.id as string) === (m.id as string))}
+                  />
+                ))}
+                <Pressable
+                  onPress={() => comingSoon('invite_extended')}
+                  style={({ pressed }) => ({
+                    marginTop: 4,
+                    paddingHorizontal: 18,
+                    paddingVertical: 12,
+                    alignSelf: 'flex-start',
+                    backgroundColor: tokens.color.bgTinted,
+                    borderRadius: 999,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600' }}>
+                    + Add to family tree
+                  </Text>
+                </Pressable>
+              </Section>
+            )}
+          </>
         )}
 
         {/* Add another branch — soft entry to multi-branch */}
@@ -566,8 +739,303 @@ export default function FamilyScreen() {
         </Section>
         )}
       </ScrollView>
+
+      {/* "Who is this to you?" modal — driven by the tagQueue */}
+      <RelationshipTagModal
+        member={currentTagTarget}
+        onClose={advanceTagQueue}
+        onTagged={() => {
+          // Refresh the graph after a tag so the immediate ring updates.
+          void reloadGraph();
+        }}
+      />
     </View>
   );
+}
+
+// ----------------------------------------------------------------------------
+// Real-mode sub-components
+// ----------------------------------------------------------------------------
+
+function ImmediateAvatarTile({ member }: { member: FamilyMember }) {
+  return (
+    <Pressable
+      onPress={() => router.push(`/member/${member.userId}`)}
+      style={({ pressed }) => ({
+        alignItems: 'center',
+        gap: 6,
+        width: 84,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          backgroundColor: member.avatarColor + '22',
+          borderWidth: 2,
+          borderColor: tokens.color.accentPrimary + '88',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text
+          style={{
+            color: member.avatarColor,
+            fontWeight: '700',
+            fontSize: 22,
+          }}
+        >
+          {member.initials}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 12,
+          fontWeight: '600',
+          color: tokens.color.textPrimary,
+          textAlign: 'center',
+        }}
+      >
+        {member.displayName.split(/\s+/)[0]}
+      </Text>
+      {member.relationshipType && (
+        <Text
+          numberOfLines={1}
+          style={{
+            fontSize: 10,
+            color: tokens.color.textMuted,
+            textAlign: 'center',
+          }}
+        >
+          {prettyRelationship(member.relationshipType)}
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
+function AddImmediateTile({
+  hasExtended,
+  onPress,
+}: {
+  hasExtended: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={hasExtended ? onPress : () => router.push('/invite')}
+      style={({ pressed }) => ({
+        alignItems: 'center',
+        gap: 6,
+        width: 84,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          backgroundColor: tokens.color.bgTinted,
+          borderWidth: 2,
+          borderColor: tokens.color.borderSubtle,
+          borderStyle: 'dashed',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text
+          style={{
+            color: tokens.color.accentPrimary,
+            fontWeight: '700',
+            fontSize: 28,
+          }}
+        >
+          +
+        </Text>
+      </View>
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: '600',
+          color: tokens.color.accentPrimary,
+          textAlign: 'center',
+        }}
+      >
+        Add
+      </Text>
+    </Pressable>
+  );
+}
+
+function BranchDisclosureRow({ branch }: { branch: FamilyBranch }) {
+  const [open, setOpen] = useState(false);
+  const initials = (() => {
+    const parts = branch.branchName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  })();
+  return (
+    <View
+      style={{
+        backgroundColor: tokens.color.bgPrimary,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: tokens.color.borderSubtle,
+        overflow: 'hidden',
+        marginBottom: 8,
+      }}
+    >
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={({ pressed }) => ({
+          padding: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: tokens.color.accentSecondary + '33',
+            borderWidth: 1,
+            borderColor: tokens.color.accentSecondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              color: tokens.color.accentPrimary,
+              fontWeight: '700',
+              fontSize: 15,
+            }}
+          >
+            {initials}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{ fontSize: 15, fontWeight: '700', color: tokens.color.textPrimary }}
+          >
+            Through {branch.branchName}
+          </Text>
+          <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
+            {branch.memberCount} {branch.memberCount === 1 ? 'person' : 'people'}
+          </Text>
+        </View>
+        <Text
+          style={{
+            fontSize: 18,
+            color: tokens.color.textMuted,
+            transform: [{ rotate: open ? '90deg' : '0deg' }],
+          }}
+        >
+          ›
+        </Text>
+      </Pressable>
+      {open && (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: tokens.color.borderSubtle,
+            paddingVertical: 6,
+            paddingHorizontal: 8,
+          }}
+        >
+          {branch.members.map((m) => (
+            <Pressable
+              key={m.userId}
+              onPress={() => router.push(`/member/${m.userId}`)}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingVertical: 8,
+                paddingHorizontal: 6,
+                borderRadius: 10,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: m.avatarColor + '22',
+                  borderWidth: 1,
+                  borderColor: m.avatarColor + '44',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: m.avatarColor,
+                    fontWeight: '700',
+                    fontSize: 12,
+                  }}
+                >
+                  {m.initials}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{ fontSize: 14, color: tokens.color.textPrimary, fontWeight: '600' }}
+                >
+                  {m.displayName}
+                </Text>
+                {m.relationshipType && (
+                  <Text style={{ fontSize: 11, color: tokens.color.textMuted, marginTop: 1 }}>
+                    {prettyRelationship(m.relationshipType)}
+                  </Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 18, color: tokens.color.textMuted }}>›</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function prettyRelationship(type: string): string {
+  switch (type) {
+    case 'parent':
+      return 'Parent';
+    case 'child':
+      return 'Child';
+    case 'grandparent':
+      return 'Grandparent';
+    case 'grandchild':
+      return 'Grandchild';
+    case 'sibling':
+      return 'Sibling';
+    case 'spouse':
+      return 'Spouse';
+    case 'aunt_uncle':
+      return 'Aunt / uncle';
+    case 'niece_nephew':
+      return 'Niece / nephew';
+    case 'cousin':
+      return 'Cousin';
+    case 'in_law':
+      return 'In-law';
+    case 'family_friend':
+      return 'Family friend';
+    case 'chosen_family':
+      return 'Chosen family';
+    default:
+      return 'Family';
+  }
 }
 
 function MemberRow({

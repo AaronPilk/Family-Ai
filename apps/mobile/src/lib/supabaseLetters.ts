@@ -109,12 +109,18 @@ export async function hydrateDisplayNamesForLetters(
 export interface LetterRecipientCandidate {
   userId: string;
   displayName: string;
+  /** True when the viewer has tagged this candidate as inner-ring family. */
+  isImmediate: boolean;
 }
 
 /**
  * Returns every other member of the current user's family circles, deduped.
  * The compose screen feeds this to a dropdown. We exclude the current user
  * because the DB constraint already blocks self-send — no point showing them.
+ *
+ * A candidate is `isImmediate` if ANY of their membership rows in shared
+ * circles has is_immediate = true (since the column is viewer-tagged per
+ * circle, this is the closest thing to "Aaron considers them inner ring").
  */
 export async function listLetterRecipientCandidates(): Promise<LetterRecipientCandidate[]> {
   const { data: session } = await supabase.auth.getUser();
@@ -138,7 +144,7 @@ export async function listLetterRecipientCandidates(): Promise<LetterRecipientCa
   // Everyone else in those circles.
   const { data: others, error: othersErr } = await supabase
     .from('family_memberships')
-    .select('user_id')
+    .select('user_id, is_immediate')
     .in('circle_id', circleIds)
     .is('removed_at', null);
   if (othersErr) {
@@ -146,9 +152,14 @@ export async function listLetterRecipientCandidates(): Promise<LetterRecipientCa
     console.warn('[supabaseLetters] circle members fetch failed:', othersErr.message);
     return [];
   }
-  const otherIds = Array.from(
-    new Set((others ?? []).map((r) => r.user_id as string).filter((id) => id !== myUuid)),
-  );
+  const rows = (others ?? []) as Array<{ user_id: string; is_immediate: boolean }>;
+  const immediateById = new Map<string, boolean>();
+  for (const r of rows) {
+    if (r.user_id === myUuid) continue;
+    // Treat ANY immediate-tagged membership as a true.
+    immediateById.set(r.user_id, !!immediateById.get(r.user_id) || !!r.is_immediate);
+  }
+  const otherIds = Array.from(immediateById.keys());
   if (otherIds.length === 0) return [];
 
   await prefetchProfileNames(otherIds);
@@ -156,6 +167,7 @@ export async function listLetterRecipientCandidates(): Promise<LetterRecipientCa
     .map((id) => ({
       userId: id,
       displayName: profileNameCache.get(id) || 'Family member',
+      isImmediate: immediateById.get(id) ?? false,
     }))
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
