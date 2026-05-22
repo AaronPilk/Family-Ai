@@ -56,22 +56,10 @@ $$;
 
 grant execute on function public.is_event_member(uuid, uuid) to authenticated;
 
-create or replace function public.is_circle_member(_circle_id uuid, _user_id uuid)
-returns boolean
-language sql
-security definer
-stable
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.family_memberships
-    where circle_id = _circle_id
-      and user_id = _user_id
-      and removed_at is null
-  );
-$$;
-
-grant execute on function public.is_circle_member(uuid, uuid) to authenticated;
+-- is_circle_member already exists from migration 20260101000011 with signature
+-- (viewer_id uuid, circle_id uuid). Do not redefine — Postgres won't allow
+-- changing parameter names via CREATE OR REPLACE. Call sites below use the
+-- existing signature: public.is_circle_member(auth.uid(), circle_id).
 
 -- -----------------------------------------------------------------------------
 -- 2. events
@@ -101,7 +89,7 @@ drop policy if exists events_insert on public.events;
 create policy events_insert on public.events
   for insert with check (
     host_user_id = auth.uid()
-    and public.is_circle_member(primary_circle_id, auth.uid())
+    and public.is_circle_member(auth.uid(), primary_circle_id)
   );
 
 drop policy if exists events_update_host on public.events;
@@ -121,7 +109,7 @@ drop policy if exists event_circles_select on public.event_circles;
 create policy event_circles_select on public.event_circles
   for select using (
     public.is_event_member(event_id, auth.uid())
-    or public.is_circle_member(circle_id, auth.uid())
+    or public.is_circle_member(auth.uid(), circle_id)
   );
 
 drop policy if exists event_circles_insert on public.event_circles;
@@ -348,5 +336,5 @@ create policy event_highlights_select on public.event_highlights
 -- drop policy if exists events_update_host on public.events;
 -- drop policy if exists events_insert on public.events;
 -- drop policy if exists events_select on public.events;
--- drop function if exists public.is_circle_member(uuid, uuid);
 -- drop function if exists public.is_event_member(uuid, uuid);
+-- Note: is_circle_member is NOT dropped here — it's owned by migration 0011.
