@@ -7,6 +7,7 @@ import { Avatar } from '../../components/Avatar';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { useHasFamily } from '../../lib/useHasFamily';
 import { DEMO_NOTIFICATIONS, DEMO_PEOPLE_LIST } from '../../lib/demoData';
+import { getMyLastName } from '../../lib/useProfile';
 
 interface Notif {
   id: string;
@@ -33,6 +34,7 @@ export default function Notifications() {
   // When the user has no family, show the warm demo notification list under a
   // sticky DEMO banner. When they have family, real notifications (none yet —
   // this screen is still pre-supabase for notifications) would show here.
+  const lastName = hasFamily ? '' : getMyLastName();
   const items: Notif[] = hasFamily
     ? []
     : DEMO_NOTIFICATIONS.map((n) => {
@@ -43,7 +45,7 @@ export default function Notifications() {
           id: n.id,
           kind: n.kind,
           fromId: undefined,
-          body: n.body,
+          body: n.body.replace(/\{lastName\}/g, lastName),
           whenAgo: n.whenAgo,
           unread: n.unread,
           // Inline demo display fields, consumed below.

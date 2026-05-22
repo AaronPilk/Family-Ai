@@ -22,6 +22,18 @@ import {
   type ExtendedMember,
   type Member,
 } from './mockData';
+import { getMyLastName } from './useProfile';
+
+/**
+ * Substitute {lastName} and {firstName} placeholders in any demo string with
+ * the signed-in user's actual name. Read from the zustand profile cache so
+ * adapters (non-React) can call it directly. Falls back to "Your" if the
+ * profile hasn't loaded yet, keeping the text grammatical.
+ */
+function personalize(s: string): string {
+  const lastName = getMyLastName();
+  return s.replace(/\{lastName\}/g, lastName);
+}
 
 // ---- Cast helper for as-const literals -------------------------------------
 
@@ -40,33 +52,33 @@ import {
 export const DEMO_PEOPLE = {
   mom: {
     id: 'demo_mom',
-    name: 'Linda (Mom)',
+    name: 'Mom',
     relationship: 'Mom',
-    initials: 'LP',
+    initials: 'M',
     color: '#B9701D',
     age: 64,
   },
   dad: {
     id: 'demo_dad',
-    name: 'Tom (Dad)',
+    name: 'Dad',
     relationship: 'Dad',
-    initials: 'TP',
+    initials: 'D',
     color: '#2E8B57',
     age: 67,
   },
   grandma: {
     id: 'demo_grandma',
-    name: 'Grace (Grandma)',
+    name: 'Grandma',
     relationship: 'Grandma',
-    initials: 'GP',
+    initials: 'G',
     color: '#8C5BB1',
     age: 86,
   },
-  brother: {
-    id: 'demo_brother',
-    name: 'Mike (Brother)',
-    relationship: 'Brother',
-    initials: 'MP',
+  sibling: {
+    id: 'demo_sibling',
+    name: 'Sibling',
+    relationship: 'Sibling',
+    initials: 'S',
     color: '#3B7BC9',
     age: 34,
   },
@@ -157,7 +169,7 @@ export const DEMO_ANSWERED = [
   },
   {
     id: 'demo_a4',
-    authorId: 'demo_brother',
+    authorId: 'demo_sibling',
     question: 'What\'s your favorite memory of our childhood?',
     answer:
       'The summer we built that fort in the backyard out of pallets dad brought home from work. We slept out there three nights in a row before it rained.',
@@ -188,11 +200,11 @@ const ALL_DEMO_GUESTS: readonly EventGuest[] = [
   { memberId: DEMO_PEOPLE.mom.id as unknown as AnyMemberId, rsvp: 'going' },
   { memberId: DEMO_PEOPLE.dad.id as unknown as AnyMemberId, rsvp: 'going' },
   { memberId: DEMO_PEOPLE.grandma.id as unknown as AnyMemberId, rsvp: 'maybe' },
-  { memberId: DEMO_PEOPLE.brother.id as unknown as AnyMemberId, rsvp: 'going' },
+  { memberId: DEMO_PEOPLE.sibling.id as unknown as AnyMemberId, rsvp: 'going' },
 ] as const;
 
 const REUNION_BRING_LIST: readonly PackingItem[] = [
-  { id: 'demo_b1', item: 'Cooler + ice', assigneeId: DEMO_PEOPLE.brother.id as unknown as AnyMemberId, checked: false },
+  { id: 'demo_b1', item: 'Cooler + ice', assigneeId: DEMO_PEOPLE.sibling.id as unknown as AnyMemberId, checked: false },
   { id: 'demo_b2', item: 'Grandma\'s pie pans', assigneeId: DEMO_PEOPLE.mom.id as unknown as AnyMemberId, checked: true },
   { id: 'demo_b3', item: 'Lawn games', checked: false },
   { id: 'demo_b4', item: 'Bug spray (the strong kind)', assigneeId: 'me' as AnyMemberId, checked: false },
@@ -209,7 +221,7 @@ const REUNION_CHAT: readonly MomentMessage[] = [
   },
   {
     id: 'demo_m2',
-    authorId: DEMO_PEOPLE.brother.id as unknown as AnyMemberId,
+    authorId: DEMO_PEOPLE.sibling.id as unknown as AnyMemberId,
     body: 'Me. I\'ll grab three dozen ears the morning of.',
     whenAgo: '2d ago',
     at: '2026-06-19T14:30:00Z',
@@ -244,7 +256,7 @@ const REUNION_CHAT: readonly MomentMessage[] = [
   },
   {
     id: 'demo_m7',
-    authorId: DEMO_PEOPLE.brother.id as unknown as AnyMemberId,
+    authorId: DEMO_PEOPLE.sibling.id as unknown as AnyMemberId,
     body: 'Springsteen — Thunder Road.',
     whenAgo: '23h ago',
     at: '2026-06-20T11:15:00Z',
@@ -263,7 +275,7 @@ export const DEMO_EVENTS: readonly FamilyEvent[] = [
     id: 'demo_event_reunion',
     branchIds: ['pilks'],
     kind: 'reunion',
-    title: 'Pilks Family Reunion',
+    title: '{lastName} Family Reunion',
     subtitle: 'Three generations under one roof',
     dateRangeText: 'Jul 17 – Jul 20, 2026',
     startsAt: '2026-07-17',
@@ -271,7 +283,7 @@ export const DEMO_EVENTS: readonly FamilyEvent[] = [
     status: 'upcoming',
     coverTint: '#E8B274',
     coverGlyph: '🌾',
-    locationText: 'Aunt Susan\'s place, Hudson Valley NY',
+    locationText: 'TBD',
     organizerId: 'me' as AnyMemberId,
     guests: ALL_DEMO_GUESTS as EventGuest[],
     bringList: REUNION_BRING_LIST as PackingItem[],
@@ -292,7 +304,7 @@ export const DEMO_EVENTS: readonly FamilyEvent[] = [
     status: 'past',
     coverTint: '#C0345C',
     coverGlyph: '🦃',
-    locationText: 'Grandma Grace\'s',
+    locationText: 'Grandma\'s',
     organizerId: DEMO_PEOPLE.grandma.id as unknown as AnyMemberId,
     guests: ALL_DEMO_GUESTS as EventGuest[],
     bringList: [],
@@ -320,7 +332,7 @@ export const DEMO_EVENTS: readonly FamilyEvent[] = [
     id: 'demo_event_birthday',
     branchIds: ['pilks'],
     kind: 'gathering',
-    title: 'Grandma Grace\'s 87th',
+    title: 'Grandma\'s Birthday',
     subtitle: 'Small dinner, big cake',
     dateRangeText: 'Aug 12, 2026',
     startsAt: '2026-08-12',
@@ -355,7 +367,7 @@ export const DEMO_NOTIFICATIONS = [
     kind: 'question_received' as const,
     fromId: DEMO_PEOPLE.mom.id,
     fromName: DEMO_PEOPLE.mom.name,
-    body: 'Linda asked you a memory question.',
+    body: 'Mom asked you a memory question.',
     whenAgo: '1h ago',
     unread: true,
   },
@@ -364,7 +376,7 @@ export const DEMO_NOTIFICATIONS = [
     kind: 'answer_received' as const,
     fromId: DEMO_PEOPLE.grandma.id,
     fromName: DEMO_PEOPLE.grandma.name,
-    body: 'Grandma Grace answered your question about her wedding day.',
+    body: 'Grandma answered your question about her wedding day.',
     whenAgo: '3h ago',
     unread: true,
   },
@@ -373,7 +385,7 @@ export const DEMO_NOTIFICATIONS = [
     kind: 'moment_update' as const,
     fromId: DEMO_PEOPLE.dad.id,
     fromName: DEMO_PEOPLE.dad.name,
-    body: 'Tom voted on dates for the Pilks Reunion.',
+    body: 'Dad voted on dates for the {lastName} Family Reunion.',
     whenAgo: 'yesterday',
     unread: false,
   },
@@ -394,13 +406,18 @@ export const DEMO_NOTIFICATIONS = [
 
 export function eventsFromDemo(): FamilyEvent[] {
   // Spread to defeat the readonly tuple type; screens treat events as mutable.
+  // String fields run through personalize() so {lastName} placeholders pick up
+  // the signed-in user's family name ("Reisman Family Reunion", etc.).
   return DEMO_EVENTS.map((e) => ({
     ...e,
+    title: personalize(e.title),
+    subtitle: personalize(e.subtitle),
+    locationText: personalize(e.locationText),
     branchIds: [...e.branchIds],
     guests: e.guests.map((g) => ({ ...g })),
-    bringList: e.bringList.map((b) => ({ ...b })),
+    bringList: e.bringList.map((b) => ({ ...b, item: personalize(b.item) })),
     polls: { ...e.polls },
-    activity: e.activity.map((m) => ({ ...m })),
+    activity: e.activity.map((m) => ({ ...m, body: personalize(m.body) })),
     photos: e.photos.map((p) => ({ ...p })),
     highlights: e.highlights ? e.highlights.map((h) => ({ ...h })) : [],
   }));

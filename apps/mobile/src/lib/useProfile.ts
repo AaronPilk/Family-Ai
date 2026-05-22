@@ -214,5 +214,36 @@ export function firstNameOf(displayName: string | null | undefined): string {
   return first && first.length > 0 ? first : 'there';
 }
 
+/**
+ * Extract a usable last name (family name) from a display name. Falls back
+ * to first name if the user only entered one token, then to "Your" so demo
+ * text stays grammatical ("Your Family Reunion" instead of "  Family Reunion").
+ */
+export function lastNameOf(displayName: string | null | undefined): string {
+  if (!displayName) return 'Your';
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'Your';
+  if (parts.length === 1) return parts[0]!;
+  return parts[parts.length - 1]!;
+}
+
+/**
+ * Reads the current signed-in user's last name straight from the zustand
+ * cache without a React hook. Safe to call from plain adapter functions
+ * (like the demo-data adapters) that need to personalize strings at render
+ * time but aren't inside a React component.
+ *
+ * Returns "Your" when the profile isn't loaded yet — keeps text grammatical
+ * ("Your Family Reunion") rather than producing an empty leading space.
+ */
+export function getMyLastName(): string {
+  return lastNameOf(useProfileStore.getState().profile?.displayName);
+}
+
+/** Same as getMyLastName but for first name. */
+export function getMyFirstName(): string {
+  return firstNameOf(useProfileStore.getState().profile?.displayName);
+}
+
 /** Re-export for callers that just want the client-side role. */
 export type { UserRole };
