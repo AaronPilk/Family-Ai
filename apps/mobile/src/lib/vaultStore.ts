@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { VAULT, type VaultItem } from './mockData';
+import { type VaultItem } from './mockData';
 
+/**
+ * Vault store — initialized empty. The Vault flow itself is still
+ * placeholder UI; nothing is persisted to Supabase yet. Real users will see
+ * an empty "you haven't sealed anything yet" state.
+ */
 interface VaultState {
   items: VaultItem[];
   addItem: (i: VaultItem) => void;
@@ -10,7 +15,7 @@ interface VaultState {
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
-  items: VAULT.map((v) => ({ ...v })),
+  items: [],
   addItem: (i) => set((s) => ({ items: [i, ...s.items] })),
   updateItem: (id, patch) =>
     set((s) => ({

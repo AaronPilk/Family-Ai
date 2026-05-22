@@ -1,28 +1,14 @@
 import { create } from 'zustand';
-import {
-  MOMENTS,
-  ME,
-  type FamilyMoment,
-  type PollOption,
-  type PackingItem,
-  type MemberId,
-} from './mockData';
+import { type FamilyMoment, type PollOption, ME } from './mockData';
 
 /**
- * Local mutable copy of moments so the demo can react to taps.
- * Keyed by moment id; mirrors the shape in mockData but lets us mutate.
+ * Legacy "moments" store — the older Tahoe/Thanksgiving planning shape that
+ * predates the Events surface. Initialized empty in this pass; nothing in the
+ * critical-path UI reads it for the family-test rollout, but the type still
+ * compiles so the few remaining references (timeline picker, etc.) keep
+ * working.
  */
 type MomentMap = Record<string, FamilyMoment>;
-
-function clone(m: FamilyMoment): FamilyMoment {
-  return {
-    ...m,
-    datePoll: m.datePoll?.map((o) => ({ ...o, votes: [...o.votes] })),
-    locationPoll: m.locationPoll?.map((o) => ({ ...o, votes: [...o.votes] })),
-    packingList: m.packingList?.map((p) => ({ ...p })),
-    activity: m.activity.map((a) => ({ ...a })),
-  };
-}
 
 interface MomentState {
   moments: MomentMap;
@@ -32,10 +18,8 @@ interface MomentState {
   getMoment: (id: string) => FamilyMoment | undefined;
 }
 
-const initialMap: MomentMap = Object.fromEntries(MOMENTS.map((m) => [m.id, clone(m)]));
-
 export const useMomentStore = create<MomentState>((set, get) => ({
-  moments: initialMap,
+  moments: {},
   toggleVote: (momentId, poll, optionId) =>
     set((s) => {
       const m = s.moments[momentId];
@@ -50,11 +34,9 @@ export const useMomentStore = create<MomentState>((set, get) => ({
         };
       });
       if (!pool) return s;
-      return {
-        moments: { ...s.moments, [momentId]: { ...m, [poolKey]: pool } },
-      };
+      return { moments: { ...s.moments, [momentId]: { ...m, [poolKey]: pool } } };
     }),
-  addMoment: (m) => set((s) => ({ moments: { ...s.moments, [m.id]: clone(m) } })),
+  addMoment: (m) => set((s) => ({ moments: { ...s.moments, [m.id]: m } })),
   togglePackingItem: (momentId, itemId) =>
     set((s) => {
       const m = s.moments[momentId];

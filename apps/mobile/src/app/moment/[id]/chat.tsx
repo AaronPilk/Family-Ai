@@ -11,14 +11,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../../theme/tokens';
+import { getAnyMember, type MomentMessage, type AnyMemberId } from '../../../lib/mockData';
 import {
-  MEMBERS,
-  ME,
-  getAnyMember,
-  type MomentMessage,
-  type MemberId,
-} from '../../../lib/mockData';
-import { useEvent, useEventStore } from '../../../lib/eventStore';
+  useEvent,
+  sendEventMessage,
+  useHydrateEventsFromSupabase,
+} from '../../../lib/eventStore';
+import { useMyUserId } from '../../../lib/sessionStore';
+import { userIdToMemberId, getCachedDisplayName } from '../../../lib/supabaseEvents';
 import { Avatar } from '../../../components/Avatar';
 
 /**
@@ -38,9 +38,16 @@ import { Avatar } from '../../../components/Avatar';
 export default function EventChat() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  // Hydrate from Supabase in case the user deep-linked into the chat before
+  // visiting the events tab. Without this, deep-links land on a blank screen
+  // because the store is empty until something kicks off the fetch.
+  useHydrateEventsFromSupabase();
   const event = useEvent(id ?? '');
-  const postChatter = useEventStore((s) => s.postChatter);
+  const myUuid = useMyUserId();
+  const myMemberId = myUuid ? userIdToMemberId(myUuid) : null;
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   // Auto-scroll to bottom on mount + whenever the message list changes.
@@ -48,32 +55,84 @@ export default function EventChat() {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
   }, [event?.activity.length]);
 
-  // Cosmetic typing indicator — picks a random going-but-not-me guest the first
-  // time you open chat. Fades after a few seconds. Sells the "live" feeling.
-  const typingFrom = useMemo(() => {
-    if (!event) return null;
-    const candidates = event.guests.filter((g) => g.rsvp === 'going' && g.memberId !== ME);
-    if (candidates.length === 0) return null;
-    return candidates[Math.floor(Math.random() * candidates.length)]!.memberId;
-  }, [event?.id]);
-  const [typingVisible, setTypingVisible] = useState(true);
+  // Cosmetic typing indicator was previously seeded from mock guests; now that
+  // the guest roster is real, we just skip the placeholder. (Real presence
+  // wiring is a future batch.)
+  const typingFrom = useMemo(() => null as AnyMemberId | null, []);
+  const [typingVisible, setTypingVisible] = useState(false);
   useEffect(() => {
+    if (!typingFrom) return;
     const t = setTimeout(() => setTypingVisible(false), 4200);
     return () => clearTimeout(t);
-  }, []);
+  }, [typingFrom]);
 
-  if (!event) return null;
+  // Show an explicit loading / not-found state instead of a blank screen.
+  // The previous `return null` left the user staring at nothing with no way
+  // back when they deep-linked to a chat before the store hydrated.
+  if (!event) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: tokens.color.bgSecondary,
+          paddingTop: insets.top,
+          paddingHorizontal: 24,
+          gap: 14,
+        }}
+      >
+        <Text style={{ fontSize: 15, color: tokens.color.textMuted, textAlign: 'center' }}>
+          Loading chat…
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => ({
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            borderRadius: 999,
+            backgroundColor: tokens.color.bgPrimary,
+            borderWidth: 1,
+            borderColor: tokens.color.borderSubtle,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 14, color: tokens.color.textPrimary, fontWeight: '600' }}>
+            ‹ Back
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
-  const submit = () => {
+  const submit = async () => {
     const body = draft.trim();
-    if (!body) return;
-    postChatter(event.id, body);
+    if (!body || sending) return;
+    setSending(true);
+    setSendError(null);
     setDraft('');
-    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    try {
+      await sendEventMessage(event.id, body);
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    } catch (err) {
+      // Restore the draft so the user can retry, and surface the error to the
+      // user. Silently dropping the message would be the worst-case bug for
+      // family-group chat — people would think their message went through.
+      setDraft(body);
+      setSendError(
+        err instanceof Error && err.message
+          ? `Couldn't send: ${err.message}`
+          : "Couldn't send your message. Tap send to try again.",
+      );
+      // eslint-disable-next-line no-console
+      console.warn('[chat] send failed:', err);
+    } finally {
+      setSending(false);
+    }
   };
 
   // Build display list interleaved with date separators.
-  const items = buildItems(event.activity);
+  const items = buildItems(event.activity, myMemberId);
   const going = event.guests.filter((g) => g.rsvp === 'going');
   const recentSenders = uniqueRecentSenders(event.activity, 5);
 
@@ -159,11 +218,17 @@ export default function EventChat() {
             return <DateSeparator key={`sep-${i}`} label={item.label} />;
           }
           return (
-            <ChatBubble key={item.msg.id} msg={item.msg} first={item.first} last={item.last} />
+            <ChatBubble
+              key={item.msg.id}
+              msg={item.msg}
+              first={item.first}
+              last={item.last}
+              myMemberId={myMemberId}
+            />
           );
         })}
 
-        {typingVisible && typingFrom && <TypingBubble memberId={typingFrom} />}
+        {typingVisible && typingFrom && <TypingBubble memberId={typingFrom as AnyMemberId} />}
 
         {event.activity.length === 0 && (
           <View
@@ -184,6 +249,23 @@ export default function EventChat() {
           </View>
         )}
       </ScrollView>
+
+      {/* Inline send error — surfaces RLS / network failures so the user knows
+          their message didn't go through. The draft is restored above so they
+          can retry without retyping. */}
+      {sendError && (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            backgroundColor: tokens.color.danger + '18',
+            borderTopWidth: 1,
+            borderTopColor: tokens.color.danger + '40',
+          }}
+        >
+          <Text style={{ fontSize: 12, color: tokens.color.danger }}>{sendError}</Text>
+        </View>
+      )}
 
       {/* Composer */}
       <View
@@ -268,7 +350,7 @@ type DisplayItem =
   | { kind: 'separator'; label: string }
   | { kind: 'message'; msg: MomentMessage; first: boolean; last: boolean };
 
-function buildItems(msgs: MomentMessage[]): DisplayItem[] {
+function buildItems(msgs: MomentMessage[], _myMemberId: AnyMemberId | null): DisplayItem[] {
   const out: DisplayItem[] = [];
   for (let i = 0; i < msgs.length; i++) {
     const m = msgs[i]!;
@@ -315,9 +397,9 @@ function atMidnight(d: Date): Date {
   return r;
 }
 
-function uniqueRecentSenders(msgs: MomentMessage[], limit: number): MemberId[] {
-  const seen = new Set<MemberId>();
-  const out: MemberId[] = [];
+function uniqueRecentSenders(msgs: MomentMessage[], limit: number): AnyMemberId[] {
+  const seen = new Set<AnyMemberId>();
+  const out: AnyMemberId[] = [];
   for (let i = msgs.length - 1; i >= 0 && out.length < limit; i--) {
     const a = msgs[i]!.authorId;
     if (!seen.has(a)) {
@@ -347,9 +429,26 @@ function DateSeparator({ label }: { label: string }) {
   );
 }
 
-function ChatBubble({ msg, first, last }: { msg: MomentMessage; first: boolean; last: boolean }) {
-  const isMine = msg.authorId === ME;
-  const author = MEMBERS[msg.authorId as MemberId];
+function ChatBubble({
+  msg,
+  first,
+  last,
+  myMemberId,
+}: {
+  msg: MomentMessage;
+  first: boolean;
+  last: boolean;
+  myMemberId: AnyMemberId | null;
+}) {
+  const isMine = myMemberId != null && msg.authorId === myMemberId;
+  const cachedName = getCachedDisplayName(msg.authorId as `user_${string}`);
+  const fallback = getAnyMember(msg.authorId);
+  const author = {
+    name: cachedName || fallback.name,
+    initials: (cachedName?.[0] ?? fallback.initials).toUpperCase(),
+    color: fallback.color,
+    relationship: fallback.relationship,
+  };
   if (isMine) {
     return (
       <View style={{ alignSelf: 'flex-end', maxWidth: '78%', alignItems: 'flex-end' }}>
@@ -428,8 +527,8 @@ function ChatBubble({ msg, first, last }: { msg: MomentMessage; first: boolean; 
   );
 }
 
-function TypingBubble({ memberId }: { memberId: MemberId | string }) {
-  const m = getAnyMember(memberId as MemberId);
+function TypingBubble({ memberId }: { memberId: AnyMemberId }) {
+  const m = getAnyMember(memberId);
   return (
     <View
       style={{

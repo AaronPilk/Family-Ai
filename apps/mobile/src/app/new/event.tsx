@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { router } from 'expo-router';
 import {
   ScrollView,
@@ -8,25 +8,12 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
-import {
-  BRANCHES,
-  MEMBERS,
-  EXTENDED_MEMBERS,
-  ME,
-  type MemberId,
-  type ExtendedMemberId,
-  type AnyMemberId,
-  type BranchId,
-  type EventKind,
-  type FamilyEvent,
-  type EventGuest,
-} from '../../lib/mockData';
-import { useVisibleBranches } from '../../lib/branchStore';
-import { useEventStore } from '../../lib/eventStore';
-import { Avatar } from '../../components/Avatar';
+import { type EventKind } from '../../lib/mockData';
+import { createEventFromInput } from '../../lib/eventStore';
 
 const KIND_OPTIONS: { id: EventKind; label: string; glyph: string; tint: string }[] = [
   { id: 'reunion', label: 'Family reunion', glyph: '🌾', tint: '#E8B274' },
@@ -38,105 +25,70 @@ const KIND_OPTIONS: { id: EventKind; label: string; glyph: string; tint: string 
 
 const COVER_GLYPHS = ['🌾', '🏖', '🍂', '🎄', '🎂', '✈️', '🍷', '🏕', '🎉', '⛵️', '🌻', '🏔'];
 
+// Loose RFC-5321-ish email regex. Not exhaustive, but rejects the most common
+// junk we'd otherwise send to Supabase (e.g. "<aaron@example.com>", "foo@",
+// "@bar.com", or names with embedded commas). Strict validation happens at
+// the auth layer when the invitee actually signs up; this is just a cheap
+// pre-flight so we don't poison event_guests rows with garbage.
+const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+function parseEmails(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[,\s\n;]+/)
+        // Strip common decorations: "Aaron <aaron@example.com>", quoted
+        // names, surrounding angle brackets, trailing punctuation.
+        .map((s) => {
+          const trimmed = s.trim();
+          // If wrapped like "Display <addr>", extract the inside.
+          const angle = trimmed.match(/<([^>]+)>/);
+          const candidate = (angle ? angle[1] : trimmed) ?? '';
+          return candidate.replace(/^[<"'(]+|[>"')]+$/g, '').trim().toLowerCase();
+        })
+        .filter((s) => s.length > 0 && EMAIL_RE.test(s)),
+    ),
+  );
+}
+
 export default function NewEvent() {
   const insets = useSafeAreaInsets();
-  const visible = useVisibleBranches();
-  const addEvent = useEventStore((s) => s.addEvent);
 
   const [kind, setKind] = useState<EventKind>('reunion');
   const [title, setTitle] = useState('');
-  const [dateRange, setDateRange] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [location, setLocation] = useState('');
   const [glyph, setGlyph] = useState(COVER_GLYPHS[0]!);
-  const [selectedBranches, setSelectedBranches] = useState<BranchId[]>(
-    visible.length > 0 ? [visible[0]!.id] : ['pilks'],
-  );
-  // Default invites = all members of the selected branches.
-  const branchMemberIds = useMemo(
-    () =>
-      Array.from(new Set(selectedBranches.flatMap((bid) => BRANCHES[bid].memberIds))) as MemberId[],
-    [selectedBranches],
-  );
-  // Reunion mode: also offer extended-family invites scoped to picked branches.
-  const extendedPool: ExtendedMemberId[] = useMemo(
-    () =>
-      Object.values(EXTENDED_MEMBERS)
-        .filter((m) => selectedBranches.includes(m.branchId))
-        .map((m) => m.id),
-    [selectedBranches],
-  );
+  const [inviteEmailsRaw, setInviteEmailsRaw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [invitedCore, setInvitedCore] = useState<MemberId[]>(branchMemberIds);
-  const [invitedExt, setInvitedExt] = useState<ExtendedMemberId[]>([]);
+  const parsedEmails = parseEmails(inviteEmailsRaw);
+  const canSave = title.trim().length > 0 && !busy;
 
-  // Keep core invites in sync when branches change (additive — don't unselect manual ones).
-  useEffect(() => {
-    setInvitedCore((cur) => Array.from(new Set([...cur, ...branchMemberIds])));
-  }, [branchMemberIds]);
-
-  function toggleBranch(b: BranchId) {
-    setSelectedBranches((cur) =>
-      cur.includes(b) ? (cur.length > 1 ? cur.filter((x) => x !== b) : cur) : [...cur, b],
-    );
-  }
-
-  function toggleCore(id: MemberId) {
-    if (id === ME) return;
-    setInvitedCore((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  }
-  function toggleExt(id: ExtendedMemberId) {
-    setInvitedExt((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  }
-
-  const canSave =
-    title.trim().length > 0 && dateRange.trim().length > 0 && selectedBranches.length > 0;
-
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return;
-    const id = `e-${Date.now().toString(36)}`;
-    const guests: EventGuest[] = [
-      { memberId: ME, rsvp: 'going' },
-      ...invitedCore
-        .filter((m) => m !== ME)
-        .map((m) => ({ memberId: m, rsvp: 'invited' as const })),
-      ...invitedExt.map((m) => ({
-        memberId: m,
-        rsvp: 'invited' as const,
-        pendingInvite: true,
-      })),
-    ];
-    const kindMeta = KIND_OPTIONS.find((k) => k.id === kind)!;
-    const newEvent: FamilyEvent = {
-      id,
-      branchIds: selectedBranches,
-      kind,
-      title: title.trim(),
-      subtitle: `Planned by you · ${selectedBranches.map((b) => BRANCHES[b].shortName).join(' + ')}`,
-      dateRangeText: dateRange.trim(),
-      startsAt: startsAt.trim() || new Date().toISOString().slice(0, 10),
-      endsAt: endsAt.trim() || startsAt.trim() || new Date().toISOString().slice(0, 10),
-      status: 'planning',
-      coverTint: kindMeta.tint,
-      coverGlyph: glyph,
-      locationText: location.trim() || undefined,
-      organizerId: ME,
-      guests,
-      bringList: [],
-      polls: {},
-      activity: [
-        {
-          id: 'a-init',
-          authorId: ME,
-          body: `Created this ${kindMeta.label.toLowerCase()}.`,
-          whenAgo: 'just now',
-        },
-      ],
-      photos: [],
-    };
-    addEvent(newEvent);
-    router.replace(`/moment/${id}`);
+    setBusy(true);
+    setError(null);
+    try {
+      const kindMeta = KIND_OPTIONS.find((k) => k.id === kind)!;
+      const eventId = await createEventFromInput({
+        title: title.trim(),
+        kind,
+        startsAt: startsAt.trim() || undefined,
+        endsAt: endsAt.trim() || startsAt.trim() || undefined,
+        locationText: location.trim() || undefined,
+        coverTint: kindMeta.tint,
+        coverGlyph: glyph,
+        inviteEmails: parsedEmails,
+      });
+      router.replace(`/moment/${eventId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the event. Try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -164,8 +116,8 @@ export default function NewEvent() {
             marginTop: -10,
           }}
         >
-          Invite everyone, lock in the dates and place, share what you're bringing. After it,
-          FamLink stitches a highlight reel from everything you posted.
+          Pick a kind, give it a name, invite people by email. They'll get a link to join the chat
+          and RSVP.
         </Text>
 
         {/* Kind picker */}
@@ -212,16 +164,6 @@ export default function NewEvent() {
           />
         </Field>
 
-        <Field label="DATES (text)">
-          <TextInput
-            value={dateRange}
-            onChangeText={setDateRange}
-            placeholder="e.g. Jul 17 – 20, 2026"
-            placeholderTextColor={tokens.color.textMuted}
-            style={{ fontSize: 16, color: tokens.color.textPrimary }}
-          />
-        </Field>
-
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Field label="STARTS (YYYY-MM-DD)">
@@ -231,6 +173,7 @@ export default function NewEvent() {
                 placeholder="2026-07-17"
                 placeholderTextColor={tokens.color.textMuted}
                 style={{ fontSize: 15, color: tokens.color.textPrimary }}
+                autoCapitalize="none"
               />
             </Field>
           </View>
@@ -242,6 +185,7 @@ export default function NewEvent() {
                 placeholder="2026-07-20"
                 placeholderTextColor={tokens.color.textMuted}
                 style={{ fontSize: 15, color: tokens.color.textPrimary }}
+                autoCapitalize="none"
               />
             </Field>
           </View>
@@ -283,158 +227,68 @@ export default function NewEvent() {
           </View>
         </Section>
 
-        {/* Branch picker (multi-select for cross-branch reunions) */}
-        {visible.length > 1 && (
-          <Section label="WHICH FAMILIES? (PICK ONE OR BOTH)">
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {visible.map((b) => {
-                const active = selectedBranches.includes(b.id);
-                return (
-                  <Pressable
-                    key={b.id}
-                    onPress={() => toggleBranch(b.id)}
-                    style={({ pressed }) => ({
-                      flex: 1,
-                      padding: 12,
-                      borderRadius: 14,
-                      backgroundColor: active ? tokens.color.bgTinted : tokens.color.bgPrimary,
-                      borderWidth: 1.5,
-                      borderColor: active ? b.color : tokens.color.borderSubtle,
-                      opacity: pressed ? 0.7 : 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 8,
-                    })}
-                  >
-                    <View
-                      style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: b.color }}
-                    />
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}
-                    >
-                      {b.shortName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {selectedBranches.length > 1 && (
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: tokens.color.warning,
-                  marginTop: 6,
-                  lineHeight: 18,
-                }}
-              >
-                Cross-branch event — both families will see this one. Photos and chatter stay scoped
-                to this event, not your branches' timelines.
-              </Text>
-            )}
-          </Section>
-        )}
-
-        {/* Immediate family invites */}
-        <Section label="IMMEDIATE FAMILY">
-          <View style={{ gap: 8 }}>
-            {branchMemberIds.map((id) => {
-              const m = MEMBERS[id];
-              const included = invitedCore.includes(id);
-              const isYou = id === ME;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => toggleCore(id)}
-                  disabled={isYou}
-                  style={({ pressed }) => ({
-                    padding: 12,
-                    backgroundColor: included ? tokens.color.bgTinted : tokens.color.bgPrimary,
-                    borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: included ? tokens.color.accentPrimary : tokens.color.borderSubtle,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Avatar member={m} size="sm" />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: tokens.color.textPrimary }}
-                    >
-                      {m.name}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
-                      {isYou ? 'You (always in)' : m.relationship}
-                    </Text>
-                  </View>
-                  <Checkbox checked={included} />
-                </Pressable>
-              );
-            })}
+        {/* Invite by email */}
+        <Section label="INVITE BY EMAIL">
+          <Text
+            style={{
+              fontSize: 12,
+              color: tokens.color.textMuted,
+              lineHeight: 18,
+              marginBottom: 4,
+            }}
+          >
+            One per line, or separated by commas. Each person gets a guest record on this event —
+            when they sign up later, their email matches up automatically.
+          </Text>
+          <View
+            style={{
+              backgroundColor: tokens.color.bgPrimary,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: tokens.color.borderSubtle,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              minHeight: 96,
+            }}
+          >
+            <TextInput
+              value={inviteEmailsRaw}
+              onChangeText={setInviteEmailsRaw}
+              placeholder="mom@example.com, brother@example.com"
+              placeholderTextColor={tokens.color.textMuted}
+              multiline
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              style={{
+                fontSize: 15,
+                color: tokens.color.textPrimary,
+                lineHeight: 22,
+                minHeight: 72,
+                textAlignVertical: 'top',
+              }}
+            />
           </View>
+          {parsedEmails.length > 0 && (
+            <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 6 }}>
+              Will invite {parsedEmails.length} {parsedEmails.length === 1 ? 'person' : 'people'}.
+            </Text>
+          )}
         </Section>
 
-        {/* Extended family invites (only meaningful for reunions/big gatherings) */}
-        {extendedPool.length > 0 &&
-          (kind === 'reunion' || kind === 'gathering' || kind === 'holiday') && (
-            <Section label="EXTENDED FAMILY & GUESTS">
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: tokens.color.textMuted,
-                  lineHeight: 18,
-                  marginBottom: 6,
-                }}
-              >
-                Cousins, aunts, uncles, in-laws, family friends. They get an invite even if they
-                haven't installed FamLink yet.
-              </Text>
-              <View style={{ gap: 8 }}>
-                {extendedPool.map((id) => {
-                  const m = EXTENDED_MEMBERS[id];
-                  const included = invitedExt.includes(id);
-                  return (
-                    <Pressable
-                      key={id}
-                      onPress={() => toggleExt(id)}
-                      style={({ pressed }) => ({
-                        padding: 12,
-                        backgroundColor: included ? tokens.color.bgTinted : tokens.color.bgPrimary,
-                        borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: included
-                          ? tokens.color.accentPrimary
-                          : tokens.color.borderSubtle,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        opacity: pressed ? 0.7 : 1,
-                      })}
-                    >
-                      <Avatar member={m} size="sm" />
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: tokens.color.textPrimary,
-                          }}
-                        >
-                          {m.name}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: tokens.color.textMuted, marginTop: 2 }}>
-                          {m.relationship}
-                        </Text>
-                      </View>
-                      <Checkbox checked={included} />
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Section>
-          )}
+        {error && (
+          <View
+            style={{
+              backgroundColor: tokens.color.danger + '18',
+              borderRadius: 12,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: tokens.color.danger + '40',
+            }}
+          >
+            <Text style={{ color: tokens.color.danger, fontSize: 13 }}>{error}</Text>
+          </View>
+        )}
 
         {/* Save */}
         <Pressable
@@ -447,9 +301,14 @@ export default function NewEvent() {
             alignItems: 'center',
             justifyContent: 'center',
             opacity: pressed ? 0.85 : 1,
+            flexDirection: 'row',
+            gap: 10,
           })}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>Create event</Text>
+          {busy && <ActivityIndicator color="white" />}
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 17 }}>
+            {busy ? 'Creating…' : 'Create event'}
+          </Text>
         </Pressable>
         <Text
           style={{
@@ -460,30 +319,11 @@ export default function NewEvent() {
             lineHeight: 18,
           }}
         >
-          SMS invites via Twilio land in a later batch. For now invitees get a push notification and
-          a shareable link.
+          Email + SMS sending is coming soon. Until then, share the event link with your family
+          directly.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <View
-      style={{
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: checked ? tokens.color.accentPrimary : 'transparent',
-        borderWidth: 2,
-        borderColor: checked ? tokens.color.accentPrimary : tokens.color.borderStrong,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {checked && <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>✓</Text>}
-    </View>
   );
 }
 

@@ -3,8 +3,7 @@ import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { daysUntil, rsvpCount, type FamilyEvent } from '../../lib/mockData';
-import { useEventsInBranches } from '../../lib/eventStore';
-import { useScopedBranchIds } from '../../lib/branchStore';
+import { useAllEvents, useHydrateEventsFromSupabase } from '../../lib/eventStore';
 
 /**
  * Events tab — the second-mode home. Reunions, vacations, holidays.
@@ -13,8 +12,8 @@ import { useScopedBranchIds } from '../../lib/branchStore';
  */
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
-  const scopedIds = useScopedBranchIds();
-  const events = useEventsInBranches(scopedIds);
+  useHydrateEventsFromSupabase();
+  const events = useAllEvents();
 
   const upcoming = events
     .filter((e) => e.status !== 'past')
@@ -92,6 +91,58 @@ export default function EventsScreen() {
           </Section>
         )}
 
+        {/* Onboarding hint — disappears the moment the user has any event. This
+            is static UI, not seeded data, so it never confuses anyone with a
+            fake roster of people. */}
+        {events.length === 0 && (
+          <View
+            style={{
+              backgroundColor: tokens.color.accentPrimary,
+              padding: 22,
+              borderRadius: 22,
+              gap: 8,
+              shadowColor: tokens.color.accentPrimary,
+              shadowOpacity: 0.18,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 6 },
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: '#FFD8E0',
+                letterSpacing: 1.5,
+              }}
+            >
+              WELCOME TO FAMLINK
+            </Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: 'white', lineHeight: 27 }}>
+              Start with a reunion, vacation, or holiday gathering.
+            </Text>
+            <Text style={{ fontSize: 14, color: '#FFD8E0', lineHeight: 20 }}>
+              Invite your family by email — they'll see the chat, the dates, the bring-list, and
+              the photos as everyone fills them in.
+            </Text>
+            <Pressable
+              onPress={() => router.push('/new/event')}
+              style={({ pressed }) => ({
+                alignSelf: 'flex-start',
+                marginTop: 8,
+                paddingHorizontal: 18,
+                paddingVertical: 11,
+                backgroundColor: 'white',
+                borderRadius: 999,
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text style={{ color: tokens.color.accentPrimary, fontWeight: '700', fontSize: 14 }}>
+                Create your first event →
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Empty state */}
         {events.length === 0 && (
           <View
@@ -106,9 +157,9 @@ export default function EventsScreen() {
               No events yet
             </Text>
             <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
-              Start a reunion, vacation, or holiday gathering. FamLink handles the invites, the
-              chat, the bring list, the votes, the photos — and stitches it into a highlight reel
-              after.
+              Reunions, vacations, holidays — FamLink keeps the group chat, the invites, the
+              bring-list, and the photos in one place. After the event, it stitches a highlight
+              reel from everything everyone posted.
             </Text>
             <Pressable
               onPress={() => router.push('/new/event')}

@@ -145,22 +145,24 @@ export default function FamilyScreen() {
               ))}
             </>
           )}
-          <Pressable
-            onPress={() => comingSoon('invite')}
-            style={({ pressed }) => ({
-              marginTop: 4,
-              paddingHorizontal: 18,
-              paddingVertical: 12,
-              alignSelf: 'flex-start',
-              backgroundColor: tokens.color.bgTinted,
-              borderRadius: 999,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600' }}>
-              + Invite immediate family
-            </Text>
-          </Pressable>
+          {immediateIds.length === 0 && otherCoreIds.length === 0 && (
+            <View
+              style={{
+                backgroundColor: tokens.color.bgTinted,
+                borderRadius: 14,
+                padding: 14,
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: tokens.color.textPrimary }}>
+                Add immediate family — coming next
+              </Text>
+              <Text style={{ fontSize: 13, color: tokens.color.textSecondary, lineHeight: 19 }}>
+                For now, invite people through an event (reunion, vacation, gathering) on the Events
+                tab. The "add to family tree" flow lands in the next update.
+              </Text>
+            </View>
+          )}
         </Section>
 
         {/* Extended family — the outer ring (used for events) */}
@@ -509,6 +511,7 @@ function MemberRow({
 
 function ExtendedMemberRow({ memberId }: { memberId: ExtendedMemberId }) {
   const m = EXTENDED_MEMBERS[memberId];
+  if (!m) return null;
   return (
     <Pressable
       onPress={() => comingSoon('extended_member_profile')}

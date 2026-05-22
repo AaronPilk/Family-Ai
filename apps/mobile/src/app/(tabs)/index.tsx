@@ -16,7 +16,7 @@ import {
   type FamilyEvent,
   type MemberId,
 } from '../../lib/mockData';
-import { useEventsInBranches } from '../../lib/eventStore';
+import { useAllEvents, useHydrateEventsFromSupabase } from '../../lib/eventStore';
 import {
   useCurrentBranch,
   useScopedBranchIds,
@@ -29,18 +29,20 @@ import { comingSoon } from '../../lib/comingSoon';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  useHydrateEventsFromSupabase();
   const branch = useCurrentBranch();
   const sel = useSelection();
   const scopedIds = useScopedBranchIds();
-  // For the daily prompt, pick the first branch in scope (or default Pilks for 'all')
+  // For the daily prompt, pick the first branch in scope. Empty until the
+  // prompt engine is wired — Home falls back to a friendly empty state below.
   const today = TODAY_PROMPTS[scopedIds[0] ?? 'pilks'];
   const inbox = INBOX.filter((q) => scopedIds.includes(q.branchId));
   const feed = FEED.filter((f) => scopedIds.includes(f.branchId));
   const userRole = useUserRole();
   // For younger users (children/grandchildren), pick the first suggested
-  // question in scope. This is what they'll be invited to send today.
+  // question in scope. Empty until the prompt engine is wired.
   const askSuggestion = SUGGESTED_QUESTIONS.find((q) => scopedIds.includes(q.branchId));
-  const upcomingEvents = useEventsInBranches(scopedIds)
+  const upcomingEvents = useAllEvents()
     .filter((e) => e.status !== 'past')
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const nextEvent = upcomingEvents[0];
@@ -100,7 +102,7 @@ export default function HomeScreen() {
 
         {/* TODAY hero — different shape for elders (answer) vs younger (ask) */}
         <View style={{ paddingHorizontal: 20 }}>
-          {userRole === 'elder' ? (
+          {userRole === 'elder' && today ? (
             <View
               style={{
                 backgroundColor: tokens.color.accentPrimary,
@@ -357,27 +359,30 @@ export default function HomeScreen() {
           </Pressable>
         </Section>
 
-        {/* Recent activity strip */}
-        <Section title="Recent in this branch">
-          <View style={{ gap: 12 }}>
-            {feed.slice(0, 4).map((item) => (
-              <RecentRow key={item.id} item={item} />
-            ))}
-          </View>
-          <Pressable
-            onPress={() => router.push('/feed')}
-            style={({ pressed }) => ({
-              marginTop: 12,
-              padding: 14,
-              alignItems: 'center',
-              opacity: pressed ? 0.5 : 1,
-            })}
-          >
-            <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600' }}>
-              See the whole feed →
-            </Text>
-          </Pressable>
-        </Section>
+        {/* Recent activity strip — hidden until the timeline is wired to real
+            data. Empty until then so we don't render an awkward zero-state. */}
+        {feed.length > 0 && (
+          <Section title="Recent in this branch">
+            <View style={{ gap: 12 }}>
+              {feed.slice(0, 4).map((item) => (
+                <RecentRow key={item.id} item={item} />
+              ))}
+            </View>
+            <Pressable
+              onPress={() => router.push('/feed')}
+              style={({ pressed }) => ({
+                marginTop: 12,
+                padding: 14,
+                alignItems: 'center',
+                opacity: pressed ? 0.5 : 1,
+              })}
+            >
+              <Text style={{ color: tokens.color.accentPrimary, fontWeight: '600' }}>
+                See the whole feed →
+              </Text>
+            </Pressable>
+          </Section>
+        )}
       </ScrollView>
     </View>
   );

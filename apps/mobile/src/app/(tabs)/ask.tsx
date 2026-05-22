@@ -22,11 +22,15 @@ export default function AskScreen() {
   const scopedIds = useScopedBranchIds();
   const params = useLocalSearchParams<{ preselect?: MemberId }>();
 
-  // Members across all in-scope branches (deduped, excluding 'me')
+  // Members across all in-scope branches (deduped, excluding 'me'). With the
+  // mock-data exports emptied, MEMBERS entries for non-'me' ids carry blank
+  // names — filter those out so we don't render ghost chips.
   const branchMembers = useMemo(() => {
     const ids = new Set<MemberId>();
     scopedIds.forEach((bid) => BRANCHES[bid].memberIds.forEach((m) => m !== 'me' && ids.add(m)));
-    return Array.from(ids).map((id) => MEMBERS[id]);
+    return Array.from(ids)
+      .map((id) => MEMBERS[id])
+      .filter((m) => m && m.name && m.name.length > 0);
   }, [scopedIds]);
   const [selected, setSelected] = useState<MemberId | null>(
     (params.preselect as MemberId) ?? branchMembers[0]?.id ?? null,
@@ -93,7 +97,43 @@ export default function AskScreen() {
           </Text>
         </View>
 
+        {/* Empty state when there's no one to ask yet */}
+        {branchMembers.length === 0 && (
+          <View
+            style={{
+              backgroundColor: tokens.color.bgTinted,
+              padding: 24,
+              borderRadius: 18,
+              gap: 8,
+            }}
+          >
+            <Text style={{ fontSize: 32 }}>👋</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: tokens.color.textPrimary }}>
+              Invite family first
+            </Text>
+            <Text style={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 20 }}>
+              Once family members join, you can ask them one good question a day — and their answers
+              live forever in your timeline and theirs.
+            </Text>
+            <Pressable
+              onPress={() => comingSoon('invite')}
+              style={({ pressed }) => ({
+                alignSelf: 'flex-start',
+                marginTop: 6,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                backgroundColor: tokens.color.accentPrimary,
+                borderRadius: 999,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <Text style={{ color: 'white', fontWeight: '700' }}>+ Invite family</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Recipient picker */}
+        {branchMembers.length > 0 && (
         <Section title="Who do you want to ask?">
           <ScrollView
             horizontal
@@ -124,9 +164,10 @@ export default function AskScreen() {
             })}
           </ScrollView>
         </Section>
+        )}
 
         {/* Composer */}
-        {selected && (
+        {branchMembers.length > 0 && selected && (
           <View
             style={{
               backgroundColor: tokens.color.bgPrimary,
@@ -192,7 +233,8 @@ export default function AskScreen() {
           </View>
         )}
 
-        {/* Suggested */}
+        {/* Suggested — only render when there's something to suggest */}
+        {suggested.length > 0 && (
         <Section title="Suggested questions">
           <View style={{ gap: 10 }}>
             {suggested.map((s, i) => (
@@ -223,6 +265,7 @@ export default function AskScreen() {
             ))}
           </View>
         </Section>
+        )}
       </ScrollView>
     </View>
   );

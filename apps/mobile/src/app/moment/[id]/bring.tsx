@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, View, Text, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../../theme/tokens';
-import { MEMBERS, ME } from '../../../lib/mockData';
+import { MEMBERS, ME, getAnyMember } from '../../../lib/mockData';
 import { useEvent, useEventStore } from '../../../lib/eventStore';
 import { Avatar } from '../../../components/Avatar';
 
@@ -105,8 +105,10 @@ export default function BringList() {
                 key={b.id}
                 text={b.item}
                 checked={b.checked}
-                assigneeLabel={b.assigneeId ? (MEMBERS[b.assigneeId]?.name ?? 'Someone') : ''}
-                assigneeColor={b.assigneeId ? MEMBERS[b.assigneeId]?.color : tokens.color.textMuted}
+                assigneeLabel={b.assigneeId ? (getAnyMember(b.assigneeId).name || 'Someone') : ''}
+                assigneeColor={
+                  b.assigneeId ? getAnyMember(b.assigneeId).color : tokens.color.textMuted
+                }
                 onCheck={() => toggleChecked(event.id, b.id)}
               />
             ))}

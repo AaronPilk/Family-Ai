@@ -2,8 +2,10 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../../theme/tokens';
-import { ME, getAnyMember, rsvpCount, type PollOption } from '../../../lib/mockData';
+import { getAnyMember, rsvpCount, type PollOption, type AnyMemberId } from '../../../lib/mockData';
 import { useEvent, useEventStore } from '../../../lib/eventStore';
+import { useMyUserId } from '../../../lib/sessionStore';
+import { userIdToMemberId } from '../../../lib/supabaseEvents';
 import { Avatar } from '../../../components/Avatar';
 import { comingSoon } from '../../../lib/comingSoon';
 
@@ -12,6 +14,8 @@ export default function EventPolls() {
   const insets = useSafeAreaInsets();
   const event = useEvent(id ?? '');
   const toggle = useEventStore((s) => s.togglePollVote);
+  const myUuid = useMyUserId();
+  const myMemberId = myUuid ? userIdToMemberId(myUuid) : null;
 
   if (!event) return null;
   const totalVoters = rsvpCount(event, 'going') + rsvpCount(event, 'maybe') || 1;
@@ -45,7 +49,10 @@ export default function EventPolls() {
               options={p.options!}
               totalVoters={totalVoters}
               richCards={p.rich}
-              onToggle={(optId) => toggle(event.id, p.kind, optId)}
+              myMemberId={myMemberId}
+              onToggle={(optId) =>
+                myMemberId && toggle(event.id, p.kind, optId, myMemberId)
+              }
             />
           </Section>
         ))}
@@ -93,18 +100,20 @@ function PollList({
   totalVoters,
   richCards,
   onToggle,
+  myMemberId,
 }: {
   options: PollOption[];
   totalVoters: number;
   richCards?: boolean;
   onToggle: (optionId: string) => void;
+  myMemberId: AnyMemberId | null;
 }) {
   const totalVotes = options.reduce((s, o) => s + o.votes.length, 0) || 1;
   return (
     <View style={{ gap: 8 }}>
       {options.map((opt) => {
         const pct = Math.round((opt.votes.length / totalVotes) * 100);
-        const userVoted = opt.votes.includes(ME);
+        const userVoted = myMemberId != null && opt.votes.includes(myMemberId);
         return (
           <Pressable
             key={opt.id}

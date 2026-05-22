@@ -3,8 +3,6 @@ import { ScrollView, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import {
-  MEMBERS,
-  ME,
   getAnyMember,
   daysUntil,
   rsvpCount,
@@ -15,8 +13,17 @@ import {
   type PackingItem,
   type MomentMessage,
   type EventPhoto,
+  type AnyMemberId,
 } from '../../lib/mockData';
-import { useEvent, useEventStore, useMyRsvp } from '../../lib/eventStore';
+import {
+  useEvent,
+  useEventStore,
+  useMyRsvp,
+  setMyRsvpForEvent,
+  useHydrateEventsFromSupabase,
+} from '../../lib/eventStore';
+import { useMyUserId } from '../../lib/sessionStore';
+import { userIdToMemberId, getCachedDisplayName } from '../../lib/supabaseEvents';
 import { Avatar } from '../../components/Avatar';
 import { comingSoon } from '../../lib/comingSoon';
 
@@ -28,10 +35,14 @@ import { comingSoon } from '../../lib/comingSoon';
 export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const fallbackId = id ?? 'pilks-reunion-2026';
+  // Hydrate from Supabase in case the user deep-linked into the event before
+  // visiting the events tab.
+  useHydrateEventsFromSupabase();
+  const fallbackId = id ?? '';
   const event = useEvent(fallbackId);
   const myRsvp = useMyRsvp(fallbackId);
-  const setMyRsvp = useEventStore((s) => s.setMyRsvp);
+  const myUuid = useMyUserId();
+  const myMemberId = myUuid ? userIdToMemberId(myUuid) : null;
   const togglePollVote = useEventStore((s) => s.togglePollVote);
   const toggleBringChecked = useEventStore((s) => s.toggleBringChecked);
 
@@ -138,7 +149,9 @@ export default function EventDetail() {
                       opt === 'going' ? "I'm going" : opt === 'maybe' ? 'Maybe' : "Can't make it"
                     }
                     active={myRsvp === opt}
-                    onPress={() => setMyRsvp(event.id, opt)}
+                    onPress={() => {
+                      void setMyRsvpForEvent(event.id, opt);
+                    }}
                   />
                 ))}
               </View>
@@ -209,7 +222,10 @@ export default function EventDetail() {
               <PollList
                 options={event.polls.activity}
                 totalVoters={going + maybe || 1}
-                onToggle={(optId) => togglePollVote(event.id, 'activity', optId)}
+                myMemberId={myMemberId}
+                onToggle={(optId) =>
+                  myMemberId && togglePollVote(event.id, 'activity', optId, myMemberId)
+                }
               />
             </Section>
           )}
@@ -220,7 +236,10 @@ export default function EventDetail() {
               <PollList
                 options={event.polls.date}
                 totalVoters={going + maybe || 1}
-                onToggle={(optId) => togglePollVote(event.id, 'date', optId)}
+                myMemberId={myMemberId}
+                onToggle={(optId) =>
+                  myMemberId && togglePollVote(event.id, 'date', optId, myMemberId)
+                }
               />
             </Section>
           )}
@@ -232,7 +251,10 @@ export default function EventDetail() {
                 options={event.polls.location}
                 totalVoters={going + maybe || 1}
                 richCards
-                onToggle={(optId) => togglePollVote(event.id, 'location', optId)}
+                myMemberId={myMemberId}
+                onToggle={(optId) =>
+                  myMemberId && togglePollVote(event.id, 'location', optId, myMemberId)
+                }
               />
             </Section>
           )}
@@ -586,7 +608,10 @@ function GuestPreview({ guests }: { guests: EventGuest[] }) {
     >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {visible.map((g) => {
-          const m = getAnyMember(g.memberId);
+          const base = getAnyMember(g.memberId);
+          const m = g.displayName
+            ? { ...base, name: g.displayName, initials: g.displayName[0]?.toUpperCase() ?? base.initials }
+            : base;
           const dimmed = g.rsvp === 'no' || g.rsvp === 'invited';
           return (
             <View
@@ -661,18 +686,20 @@ function PollList({
   totalVoters,
   richCards,
   onToggle,
+  myMemberId,
 }: {
   options: PollOption[];
   totalVoters: number;
   richCards?: boolean;
   onToggle: (optionId: string) => void;
+  myMemberId: AnyMemberId | null;
 }) {
   const totalVotes = options.reduce((s, o) => s + o.votes.length, 0) || 1;
   return (
     <View style={{ gap: 8 }}>
       {options.map((opt) => {
         const pct = Math.round((opt.votes.length / totalVotes) * 100);
-        const userVoted = opt.votes.includes(ME);
+        const userVoted = myMemberId != null && opt.votes.includes(myMemberId);
         return (
           <Pressable
             key={opt.id}
@@ -752,7 +779,7 @@ function BringRow({
   last?: boolean;
   onToggle: () => void;
 }) {
-  const assignee = item.assigneeId ? MEMBERS[item.assigneeId] : null;
+  const assignee = item.assigneeId ? getAnyMember(item.assigneeId) : null;
   return (
     <Pressable
       onPress={onToggle}
@@ -795,9 +822,7 @@ function BringRow({
       {assignee && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Avatar member={assignee} size="sm" />
-          <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>
-            {assignee.relationship === 'You' ? 'You' : assignee.name}
-          </Text>
+          <Text style={{ fontSize: 13, color: tokens.color.textMuted }}>{assignee.name}</Text>
         </View>
       )}
       {!assignee && (
@@ -926,7 +951,14 @@ function HighlightCard({
 }
 
 function ActivityRow({ msg }: { msg: MomentMessage }) {
-  const author = MEMBERS[msg.authorId];
+  const cached = getCachedDisplayName(msg.authorId as `user_${string}`);
+  const fallback = getAnyMember(msg.authorId);
+  const author = {
+    name: cached || fallback.name,
+    initials: (cached?.[0] ?? fallback.initials).toUpperCase(),
+    color: fallback.color,
+    relationship: fallback.relationship,
+  };
   return (
     <View
       style={{
