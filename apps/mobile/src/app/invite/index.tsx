@@ -293,7 +293,13 @@ export default function InviteScreen() {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/family');
+            }
+          }}
           hitSlop={12}
           style={({ pressed }) => ({
             width: 40,

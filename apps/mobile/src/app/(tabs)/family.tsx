@@ -557,17 +557,11 @@ export default function FamilyScreen() {
                 </Pressable>
               </View>
             </View>
-            <Pressable
-              onPress={() => router.replace('/welcome')}
-              style={({ pressed }) => ({
-                paddingVertical: 10,
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <Text style={{ color: tokens.color.danger, fontWeight: '600', fontSize: 15 }}>
-                Reset demo (back to welcome)
-              </Text>
-            </Pressable>
+            {/* Reset-demo button removed: it called router.replace('/welcome')
+                without confirmation and was easy to tap accidentally while
+                scrolling, kicking the signed-in user back to the marketing
+                screen for no reason. Use /profile → Sign out to actually log
+                out, or refresh the page to see the welcome screen again. */}
           </View>
         </Section>
         )}

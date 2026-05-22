@@ -76,7 +76,19 @@ export default function Index() {
   // null profile + signed-in is rare but legitimate (signup-trigger lag, or
   // a transient fetch error). Treat it as "needs onboarding" — the role +
   // final-step writes inside /onboarding will upsert the row anyway.
-  if (!profile || !profile.onboardingCompleted) {
+  if (!profile) {
+    return <Redirect href="/onboarding/welcome" />;
+  }
+
+  // Belt-and-suspenders: even if onboarding_completed didn't get flipped on
+  // an older account, a profile with both a name AND a role set is
+  // demonstrably past onboarding. The backfill migration (000013) handles
+  // the common case; this catches anything the migration missed.
+  const looksOnboarded =
+    profile.onboardingCompleted ||
+    (Boolean(profile.displayName?.trim()) && profile.role !== null);
+
+  if (!looksOnboarded) {
     return <Redirect href="/onboarding/welcome" />;
   }
 
