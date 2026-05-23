@@ -17,6 +17,7 @@ import { BranchSwitcher } from '../../components/BranchSwitcher';
 import { useHasFamily } from '../../lib/useHasFamily';
 import { DemoModeBanner } from '../../components/DemoModeBanner';
 import { DEMO_PEOPLE_LIST, DEMO_SUGGESTED_QUESTIONS } from '../../lib/demoData';
+import { fetchMyFamily, type FamilyMember } from '../../lib/supabaseFamily';
 
 /**
  * The Ask tab is now two surfaces in one. Younger users (children,
@@ -45,16 +46,46 @@ export default function AskScreen() {
 
   const { hasFamily, loading: hasFamilyLoading } = useHasFamily();
 
-  // Members across all in-scope branches (deduped, excluding 'me'). With the
-  // mock-data exports emptied, MEMBERS entries for non-'me' ids carry blank
-  // names — filter those out so we don't render ghost chips.
-  const realBranchMembers = useMemo(() => {
-    const ids = new Set<MemberId>();
-    scopedIds.forEach((bid) => BRANCHES[bid].memberIds.forEach((m) => m !== 'me' && ids.add(m)));
-    return Array.from(ids)
-      .map((id) => MEMBERS[id])
-      .filter((m): m is Member => !!m && !!m.name && m.name.length > 0);
-  }, [scopedIds]);
+  // Real family from Supabase. Previously the screen built realBranchMembers
+  // from mockData (BRANCHES + MEMBERS), which meant even with hasFamily=true
+  // the picker showed mock names like "Mom" / "Dad" instead of the user's
+  // actual circle members. Now we fetch the live graph and shape each entry
+  // to match the screen's existing Member type so the rest of the render
+  // logic (avatar, name, relationship subtitle) works unchanged.
+  const [familyGraph, setFamilyGraph] = useState<FamilyMember[]>([]);
+  useEffect(() => {
+    if (!hasFamily) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const g = await fetchMyFamily();
+        if (cancelled) return;
+        setFamilyGraph([...g.immediate, ...g.branches.flatMap((b) => b.members)]);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[ask] fetchMyFamily failed:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasFamily]);
+
+  const realBranchMembers = useMemo<Member[]>(() => {
+    return familyGraph.map(
+      (m) =>
+        ({
+          // The screen's Member.id is the mock MemberId enum, but we cast the
+          // real UUID through `as never` so downstream selection / send code
+          // can carry the UUID around. handleSend reads it back as string.
+          id: m.userId as never,
+          name: m.displayName,
+          relationship: m.relationshipType ?? 'Family',
+          initials: m.initials,
+          color: m.avatarColor,
+        }) as Member,
+    );
+  }, [familyGraph]);
 
   // Demo branchMembers: fake Member rows shaped like real ones. We use 'me'
   // as the id slot to keep TS happy; selection key uses person.name.
@@ -113,8 +144,13 @@ export default function AskScreen() {
 
   function handleSend() {
     if (!selected || !draft.trim()) return;
+    // TODO(ask-send): wire public.ask_question RPC. Needs:
+    //   1. ensure_family_circle to resolve circle_id
+    //   2. ensure_default_visibility_rule(circle_id) for visibility_rule_id
+    //   3. ask_question(circle_id, [selected as uuid], draft, rule_id)
+    //   4. push notification trigger on memory_items insert (kind='question')
+    // For now we keep the stub but tell the user it's coming, not "demo".
     comingSoon('send_question');
-    // After "send", clear and pop back to Home so the demo feels alive
     setDraft('');
   }
 
